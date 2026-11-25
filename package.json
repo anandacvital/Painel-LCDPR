@@ -10,7 +10,9 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "sigilo": "node scripts/verificar-sigilo.mjs",
+    "verificar": "npm run sigilo && npm run typecheck && npm test && npm run build"
   },
   "devDependencies": {
     "typescript": "^5.9.3",
