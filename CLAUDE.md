@@ -61,7 +61,7 @@ desenvolvedora): explicar decisões em linguagem simples e comentar o código.
 | Comando | O que faz |
 |---|---|
 | `npm install` | instala dependências (primeira vez) |
-| `npm run dev` | abre o painel em http://localhost:5173 |
+| `npm run dev` | abre o painel em http://localhost:5173/Painel-LCDPR/ |
 | `npm test` | roda os testes |
 | `npm run typecheck` | checa tipos |
 | `npm run sigilo` | confere que nenhum dado real está versionado |
