@@ -3,7 +3,7 @@
  * 1. Visão Executiva  2. Fluxo de Caixa  3. Receitas & Despesas  4. Imóveis  5. Comparativo
  *
  * Cada função recebe a área da aba e a Visão (recorte de dados) e desenha tudo.
- * Cores com significado fixo: verde = receitas/agro, azul = despesas, vermelho = negativo.
+ * Cores com significado fixo: verde = receitas/agro, vermelho = despesas e negativos.
  */
 import { agruparPor, mensal, totalizar, type TotalMensal } from '../../domain/agregacoes';
 import {
@@ -42,7 +42,7 @@ export function abaVisaoExecutiva(raiz: HTMLElement, v: Visao): void {
   raiz.innerHTML = `
     <div class="grade-kpi-painel">
       ${cartaoKpi({ rotulo: 'Receita bruta', valor: t.receitas, tom: 'agro', anterior: a?.receitas ?? null })}
-      ${cartaoKpi({ rotulo: 'Despesas', valor: t.despesas, anterior: a?.despesas ?? null, maiorEhMelhor: false })}
+      ${cartaoKpi({ rotulo: 'Despesas', valor: t.despesas, tom: 'despesa', anterior: a?.despesas ?? null, maiorEhMelhor: false })}
       ${cartaoKpi({ rotulo: 'Resultado', valor: t.resultado, tom: t.resultado < 0 ? 'negativo' : 'positivo', anterior: a?.resultado ?? null })}
       ${cartaoKpi({ rotulo: 'Margem', valor: null, formatado: pctTexto(t.margem), atualComparavel: t.margem ?? undefined, anterior: a?.margem ?? null, emPontos: true })}
       ${cartaoKpi({
@@ -215,7 +215,7 @@ export function abaReceitasDespesas(raiz: HTMLElement, v: Visao): void {
     yAxis: { type: 'category', inverse: true, data: despesasPorDoc.map((g) => TIPO_DOC[g.chave] ?? g.chave), axisTick: { show: false }, axisLabel: { color: COR.textoSuave } },
     series: [{
       name: 'Despesas', type: 'bar',
-      data: despesasPorDoc.map((g) => ({ value: g.despesas, itemStyle: { color: g.chave === '6' || g.chave === '3' ? COR.azul3 : COR.despesa } })),
+      data: despesasPorDoc.map((g) => ({ value: g.despesas, itemStyle: { color: g.chave === '6' || g.chave === '3' ? COR.despesaClara : COR.despesa } })),
       itemStyle: { borderRadius: [0, 4, 4, 0] },
     }],
   });
@@ -264,7 +264,7 @@ export function abaImoveis(raiz: HTMLElement, v: Visao): void {
           </dl>
           <div class="imovel-numeros">
             <div><span>Receitas</span><strong class="num agro">${formatarReais(g?.receitas ?? 0)}</strong></div>
-            <div><span>Despesas</span><strong class="num">${formatarReais(g?.despesas ?? 0)}</strong></div>
+            <div><span>Despesas</span><strong class="num negativo">${formatarReais(g?.despesas ?? 0)}</strong></div>
             <div><span>Resultado</span><strong class="num ${(g?.resultado ?? 0) < 0 ? 'negativo' : ''}">${formatarReais(g?.resultado ?? 0)}</strong></div>
           </div>
           ${a.terceiros.filter((t) => t.codImovel === im.codigo).length

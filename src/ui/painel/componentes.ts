@@ -5,7 +5,7 @@ import { formatarReais, type Centavos } from '../../domain/dinheiro';
 import { variacao } from '../../domain/destaques';
 import { esc } from '../html';
 
-export type Tom = 'neutro' | 'positivo' | 'negativo' | 'agro';
+export type Tom = 'neutro' | 'positivo' | 'negativo' | 'agro' | 'despesa';
 
 /** Variação "▲ 12,3% vs. ano anterior" com texto (não depende só da cor). */
 function blocoVariacao(atual: number, anterior: number | null | undefined, maiorEhMelhor: boolean, emPontos = false): string {

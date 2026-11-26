@@ -150,7 +150,8 @@
 .kpi-painel.tom-positivo {
   border-top-color: var(--gp-agro);
 }
-.kpi-painel.tom-negativo {
+.kpi-painel.tom-negativo,
+.kpi-painel.tom-despesa {
   border-top-color: var(--gp-alerta);
 }
 .kpi-painel-rotulo {
