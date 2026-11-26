@@ -1,4 +1,4 @@
-# src/report — relatório PDF
+# src/report — relatórios e exportações
 
-(Fase 5) Geração do PDF no navegador: capa, KPIs, gráficos, extrato da
-atividade rural para fins de IRPF, insights e saúde do arquivo.
+- `csv.ts`: exportação do relatório de inconsistências (padrão Excel pt-BR, com proteção contra fórmulas).
+- (Fase 5) PDF: capa, KPIs, gráficos, extrato da atividade rural para IRPF, insights e saúde do arquivo.
