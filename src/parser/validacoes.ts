@@ -469,6 +469,66 @@ function quantil(ordenado: readonly number[], q: number): number {
   return a + resto * (b - a);
 }
 
+/** Valor redondo "alto": a partir de R$ 10.000,00 e múltiplo exato de R$ 1.000,00 (em centavos). */
+const VALOR_REDONDO_MINIMO = 1_000_000;
+const VALOR_REDONDO_MULTIPLO = 100_000;
+
+/**
+ * RECEITA QUE PODE NÃO SER DA ATIVIDADE RURAL (por palavras do histórico).
+ *
+ * O resultado da atividade rural só inclui a venda do que o próprio produtor
+ * explora (Lei nº 8.023/1990, art. 2º; RIR/2018, arts. 50 e seguintes;
+ * IN SRF nº 83/2001, art. 5º). Três casos comuns de receita lançada errado:
+ * - ARRENDAMENTO/ALUGUEL recebido: aluguel ou arrendamento de máquinas, equipamentos
+ *   e pastagens não é atividade rural (IN SRF nº 83/2001, art. 4º, V). Terra
+ *   arrendada a terceiro rende aluguel ao arrendador, tributado como rendimento
+ *   de aluguel (carnê-leão e declaração), fora do Livro Caixa. Parceria com
+ *   partilha de riscos é atividade rural: por isso o texto pede para conferir o contrato.
+ * - VENDA DE TERRA NUA: não é receita rural; o lucro é ganho de capital
+ *   (IN SRF nº 83/2001, art. 9º, § 2º).
+ * - VENDA DE BEM DO IMOBILIZADO (máquina, veículo, benfeitoria): é receita rural
+ *   SÓ se o bem era usado exclusivamente na atividade (IN SRF nº 83/2001, art. 5º,
+ *   § 2º, III); bem de uso particular gera ganho de capital.
+ */
+const PALAVRAS_ARRENDAMENTO = /\b(ARRENDAMENT\w*|ALUGUE(L|IS)|LOCACA\w*|LOCACOES|ARRENDO)\b/;
+// O bem tem de vir logo depois de "venda de/da/do" (senão "Venda de soja - Fazenda X" seria apontado).
+const VENDA_DE = '\\b(VENDA|ALIENACAO|ALIENACOES)( PARCIAL)? (DE|DA|DO|DAS|DOS)( PARTE (DE|DA|DO))?( UMA| UM)? ';
+const PALAVRAS_TERRA = new RegExp(`${VENDA_DE}(TERRA|TERRAS|IMOVEL|IMOVEIS|FAZENDA|SITIO|CHACARA|GLEBA|AREA|LOTE|HECTARES?)\\b`);
+const PALAVRAS_IMOBILIZADO = new RegExp(`${VENDA_DE}${/(TRATOR(ES)?|MAQUINAS?|COLHEITADEIRAS?|IMPLEMENTOS?|PLANTADEIRAS?|PULVERIZADOR(ES)?|CAMINHA(O|OES)|CAMINHONETES?|CAMIONETES?|VEICULOS?|CARROS?|MOTOS?|EQUIPAMENTOS?|BENFEITORIAS?|GALPA(O|OES)|SILOS?|PIVO|MOTOR(ES)?|CARRETAS?|GRADES?)\b/.source}`);
+const BASE_ATIVIDADE = 'Lei nº 8.023/1990, art. 2º; RIR/2018 (Decreto nº 9.580/2018), arts. 50 a 61';
+
+interface ReceitaSuspeita {
+  regra: string;
+  problema: (l: Lancamento) => string;
+  comoCorrigir: string;
+}
+
+export function receitaNaoRural(historico: string): ReceitaSuspeita | null {
+  const h = normalizar(historico);
+  if (PALAVRAS_ARRENDAMENTO.test(h) && !/\bPARCERIA\b/.test(h)) {
+    return {
+      regra: 'RECEITA-ARRENDAMENTO',
+      problema: (l) => `Receita de ${formatarReais(l.entrada)} com histórico de arrendamento/aluguel: "${l.historico}". Arrendamento ou aluguel recebido não é receita da atividade rural.`,
+      comoCorrigir: `Retire do LCDPR e declare como rendimento de aluguel (carnê-leão mensal e ficha de rendimentos tributáveis). Aluguel ou arrendamento de máquinas, equipamentos agrícolas e pastagens está fora da atividade rural (IN SRF nº 83/2001, art. 4º, V). Se for PARCERIA (partilha de riscos e da produção), é atividade rural: confira o contrato e ajuste o histórico. Base: ${BASE_ATIVIDADE}.`,
+    };
+  }
+  if (PALAVRAS_TERRA.test(h)) {
+    return {
+      regra: 'RECEITA-TERRA-NUA',
+      problema: (l) => `Receita de ${formatarReais(l.entrada)} com histórico de venda de terra/imóvel: "${l.historico}". A venda da terra nua não é receita da atividade rural.`,
+      comoCorrigir: `Retire o valor da terra nua do LCDPR e apure o ganho de capital (GCAP), com o imposto pago até o último dia útil do mês seguinte (IN SRF nº 83/2001, art. 9º, § 2º). Benfeitorias, culturas e pastagens vendidas junto podem ser receita rural: separe os valores pelo contrato. Base: ${BASE_ATIVIDADE}.`,
+    };
+  }
+  if (PALAVRAS_IMOBILIZADO.test(h)) {
+    return {
+      regra: 'RECEITA-IMOBILIZADO',
+      problema: (l) => `Receita de ${formatarReais(l.entrada)} com histórico de venda de bem do imobilizado: "${l.historico}". Só é receita rural se o bem era usado exclusivamente na atividade.`,
+      comoCorrigir: `Confirme o uso do bem. Bem usado exclusivamente na atividade rural: a venda é receita rural (IN SRF nº 83/2001, art. 5º, § 2º, III), comprovada por documento com nome, CPF/CNPJ e endereço do comprador (art. 6º, parágrafo único). Veículo ou bem de uso particular: retire do LCDPR e apure ganho de capital. Base: ${BASE_ATIVIDADE}.`,
+    };
+  }
+  return null;
+}
+
 function validarRiscos(a: ArquivoLcdpr, add: Add): void {
   const lancs = a.lancamentos;
 
@@ -477,10 +537,29 @@ function validarRiscos(a: ArquivoLcdpr, add: Add): void {
 
     // ---- Sem documento ----
     if (!l.numDoc) {
+      const despesa = l.tipoLanc === '2';
       add({
         ...base, severidade: 'alerta', regra: 'SEM-DOCUMENTO', campo: 'NUM_DOC',
-        problema: `Lançamento de ${formatarReais(l.entrada || l.saida)} sem número de documento.`,
-        comoCorrigir: 'NUM_DOC não é obrigatório no leiaute, mas a Receita pode exigir a comprovação (nota, recibo, contrato). Informe o número sempre que houver documento.',
+        problema: `${despesa ? 'Despesa' : 'Lançamento'} de ${formatarReais(l.entrada || l.saida)} sem número de documento.`,
+        comoCorrigir: despesa
+          ? 'NUM_DOC não é obrigatório no leiaute, mas a despesa precisa ser comprovada por documento idôneo (nota fiscal, fatura, recibo, contrato, folha de pagamento) que identifique o beneficiário, o valor e a data; sem ele, a despesa pode ser glosada (IN SRF nº 83/2001, arts. 10 e 22, § 1º). Informe o número do documento.'
+          : 'NUM_DOC não é obrigatório no leiaute, mas a receita deve ser comprovada por documento usual da atividade (nota fiscal de produtor, nota fiscal de entrada), conforme a IN SRF nº 83/2001, art. 6º. Informe o número sempre que houver documento.',
+      });
+    }
+
+    // ---- Receita lançada como rural que pode não ser ----
+    if (ehReceita(l) && l.entrada > 0) {
+      const naoRural = receitaNaoRural(l.historico);
+      if (naoRural) add({ ...base, severidade: 'alerta', regra: naoRural.regra, campo: 'HIST', problema: naoRural.problema(l), comoCorrigir: naoRural.comoCorrigir });
+    }
+
+    // ---- Valor redondo alto ----
+    const valor = l.entrada || l.saida;
+    if (valor >= VALOR_REDONDO_MINIMO && valor % VALOR_REDONDO_MULTIPLO === 0) {
+      add({
+        ...base, severidade: 'info', regra: 'VALOR-REDONDO', campo: l.entrada ? 'VL_ENTRADA' : 'VL_SAIDA',
+        problema: `Valor redondo alto: ${formatarReais(valor)} (múltiplo exato de R$ 1.000,00).`,
+        comoCorrigir: 'Operações reais com nota fiscal raramente dão valor exato. Valor redondo costuma ser adiantamento, transferência entre contas, retirada ou estimativa. Confira se há documento que comprove a operação e se ela é mesmo da atividade rural.',
       });
     }
 
@@ -546,6 +625,24 @@ function validarRiscos(a: ArquivoLcdpr, add: Add): void {
         problema: `${pct(participacao)} das ${rotulo} (${formatarReais(maior[1])}) estão concentradas em um único participante (${formatarCpfCnpj(maior[0])}).`,
         comoCorrigir: 'É comum no agro (venda para uma única trading), mas aumenta a dependência e o impacto de um erro de cadastro. Confirme o CPF/CNPJ e os contratos.',
       });
+    }
+  }
+
+  // ---- Duplicidade provável: mesma data, mesmo valor e mesmo participante (documento diferente ou vazio) ----
+  // Complementa a regra abaixo (mesmo documento): pega o lançamento repetido com outro número ou sem número.
+  const porParticipante = new Map<string, Lancamento>();
+  for (const l of lancs) {
+    if (!l.idPartic) continue;
+    const chave = `${l.data.iso}|${l.entrada}|${l.saida}|${l.idPartic}`;
+    const primeira = porParticipante.get(chave);
+    if (primeira && primeira.numDoc.toUpperCase() !== l.numDoc.toUpperCase()) {
+      add({
+        severidade: 'alerta', categoria: 'Risco', regra: 'DUPLICIDADE-PARTICIPANTE', linha: l.linha, registro: 'Q100', campo: 'ID_PARTIC',
+        problema: `Possível duplicidade: mesma data, mesmo valor (${formatarReais(l.entrada || l.saida)}) e mesmo participante (${formatarCpfCnpj(l.idPartic)}) da linha ${primeira.linha}, com documento ${l.numDoc ? `"${l.numDoc}"` : 'vazio'}${primeira.numDoc ? ` (lá: "${primeira.numDoc}")` : ''}.`,
+        comoCorrigir: 'Pode ser legítimo (duas notas iguais no mesmo dia), mas é o padrão típico de lançamento em dobro. Confira os documentos; se for repetição, exclua um e gere o arquivo novamente.',
+      });
+    } else if (!primeira) {
+      porParticipante.set(chave, l);
     }
   }
 
