@@ -17,8 +17,9 @@ import { imprimirRazao, TITULO_RAZAO, type TipoRazao } from '../../report/razoes
 import { abaComparativo, abaFluxoCaixa, abaImoveis, abaReceitasDespesas, abaVisaoExecutiva } from './abasGraficas';
 import { detectarPrevia, montarVisao, TODOS } from './contexto';
 import { abaDetalhamento } from './detalhamento';
+import { abaPlanejamento, novoEstadoPlano, type EstadoPlano } from './planejamento';
 
-export type AbaPainel = 'executiva' | 'fluxo' | 'receitas' | 'imoveis' | 'comparativo' | 'detalhamento';
+export type AbaPainel = 'executiva' | 'fluxo' | 'receitas' | 'imoveis' | 'comparativo' | 'planejamento' | 'detalhamento';
 
 const ABAS: readonly [AbaPainel, string][] = [
   ['executiva', 'Visão Executiva'],
@@ -26,6 +27,7 @@ const ABAS: readonly [AbaPainel, string][] = [
   ['receitas', 'Receitas & Despesas'],
   ['imoveis', 'Imóveis'],
   ['comparativo', 'Comparativo'],
+  ['planejamento', 'Planejamento IRPF'],
   ['detalhamento', 'Detalhamento'],
 ];
 
@@ -34,6 +36,8 @@ export interface EstadoPainel {
   ano: number | null;
   criterio: CriterioConsolidacao;
   aba: AbaPainel;
+  /** Valores digitados na aba Planejamento IRPF (ficam ao trocar de aba). */
+  plano: EstadoPlano;
 }
 
 const SAUDE: Record<Semaforo, string> = {
@@ -43,7 +47,7 @@ const SAUDE: Record<Semaforo, string> = {
 };
 
 export function novoEstadoPainel(): EstadoPainel {
-  return { produtor: TODOS, ano: null, criterio: 'somar', aba: 'executiva' };
+  return { produtor: TODOS, ano: null, criterio: 'somar', aba: 'executiva', plano: novoEstadoPlano() };
 }
 
 /**
@@ -125,6 +129,7 @@ export function montarPainel(raiz: HTMLElement, analises: readonly ResultadoAnal
       receitas: () => abaReceitasDespesas(conteudo, visao),
       imoveis: () => abaImoveis(conteudo, visao),
       comparativo: () => abaComparativo(conteudo, analises, visao.ano),
+      planejamento: () => abaPlanejamento(conteudo, analises, visao, estado.plano),
       detalhamento: () => abaDetalhamento(conteudo, visao),
     };
     desenhar[estado.aba]();

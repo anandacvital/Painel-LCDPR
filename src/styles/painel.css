@@ -530,3 +530,190 @@ details > summary h3 {
 .aviso-previa strong {
   color: var(--gp-atencao);
 }
+
+/* ---- Aba Planejamento IRPF ---- */
+.plano-topo {
+  align-items: center;
+}
+.plano-topo .ajuda {
+  margin: 0;
+  flex: 1 1 320px;
+}
+.plano-cabecalho {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--esp-2);
+}
+.plano-cabecalho h3,
+.plano-cabecalho .ajuda {
+  margin: 0;
+}
+.plano-produtor h4 {
+  margin: var(--esp-4) 0 var(--esp-2);
+  font-size: 0.95rem;
+  color: var(--gp-navy);
+}
+.plano-opcoes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--esp-3);
+  margin-top: var(--esp-3);
+}
+.plano-opcao {
+  padding: var(--esp-3);
+  border: 1px solid var(--gp-borda);
+  border-radius: 10px;
+}
+.plano-opcao.melhor {
+  border: 2px solid var(--gp-agro);
+  background: var(--gp-agro-fundo);
+}
+.plano-opcao-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--esp-2);
+}
+.plano-opcao-topo h4 {
+  margin: 0;
+}
+.plano-opcao .ajuda {
+  margin: 4px 0 var(--esp-2);
+}
+.plano-linha {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--esp-2);
+  padding: 4px 0;
+  font-size: 0.9rem;
+}
+.plano-linha .num {
+  font-family: var(--fonte-numero);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.plano-subtotal {
+  border-top: 1px solid var(--gp-borda);
+  font-weight: 600;
+}
+.plano-imposto {
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 2px solid var(--gp-navy);
+  font-weight: 700;
+  font-size: 1rem;
+}
+.selo-melhor {
+  background: var(--gp-agro);
+  color: #fff;
+}
+.selo-alerta {
+  background: var(--gp-alerta);
+  color: #fff;
+}
+.plano-nao-cabe {
+  color: var(--gp-texto-suave);
+  font-size: 0.9rem;
+}
+.plano-alerta {
+  display: flex;
+  gap: var(--esp-2);
+  align-items: flex-start;
+  margin: var(--esp-2) 0 0;
+  padding: var(--esp-2) var(--esp-3);
+  border-left: 3px solid var(--gp-atencao);
+  background: var(--gp-atencao-fundo);
+  font-size: 0.85rem;
+}
+.plano-alerta svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  color: var(--gp-atencao);
+}
+.plano-conclusao {
+  margin: var(--esp-3) 0 0;
+  font-weight: 600;
+}
+.plano-conclusao.boa {
+  color: var(--gp-agro);
+}
+.plano-equilibrio {
+  margin: var(--esp-3) 0 0;
+  padding: var(--esp-2) var(--esp-3);
+  border-left: 3px solid var(--gp-azul-2);
+  background: var(--gp-fundo);
+  font-size: 0.9rem;
+}
+.campo-valor {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--gp-texto-suave);
+}
+.campo-valor input {
+  width: 100%;
+  max-width: 220px;
+  padding: 8px 10px;
+  border: 1px solid var(--gp-borda);
+  border-radius: 6px;
+  font: inherit;
+  font-family: var(--fonte-numero);
+  font-size: 0.95rem;
+  color: var(--gp-texto);
+  text-align: right;
+}
+.plano-prejuizo .campo-valor {
+  margin-bottom: var(--esp-2);
+}
+.plano-campos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--esp-3);
+  align-items: flex-end;
+}
+.plano-campos select {
+  max-width: 100%;
+}
+.tabela-compacta td,
+.tabela-compacta th {
+  padding: 6px 10px;
+}
+.plano-cuidados-sim,
+.plano-checklist {
+  margin: var(--esp-3) 0 0;
+  padding-left: 1.2em;
+  font-size: 0.9rem;
+}
+.plano-checklist li + li,
+.plano-cuidados-sim li + li {
+  margin-top: var(--esp-2);
+}
+.plano-checklist small {
+  display: block;
+  color: var(--gp-azul-1);
+  font-weight: 600;
+}
+.plano-alternar {
+  display: flex;
+  gap: var(--esp-2);
+  align-items: center;
+  margin-top: var(--esp-2);
+  font-weight: 600;
+}
+.plano-campos label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--gp-texto-suave);
+}
+.tabela .linha-total td {
+  font-weight: 700;
+  border-top: 2px solid var(--gp-borda);
+}

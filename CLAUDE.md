@@ -122,7 +122,14 @@ LCDPR, perguntas 47 e 52; Lei nº 8.023/1990, art. 13). Por isso o critério pad
 - QTD_LIN inclui o 9999 (exemplo da pergunta 12 do P&R LCDPR).
 - Opção 20% da receita bruta só para resultado positivo (art. 5º); optar faz perder TODO o
   prejuízo anterior (art. 16, parágrafo único). Prejuízo de PF compensável sem limite de 30% (art. 14).
-- Imposto = ESTIMATIVA a 27,5% sobre a base; sempre exibir `AVISO_ESTIMATIVA`.
+- Imposto = ESTIMATIVA pela tabela progressiva ANUAL do ano-calendário (`TABELAS_ANUAIS` em `irpf.ts`:
+  2024, 2025 e 2026, conferidas nas páginas "Tributação de 20XX" da Receita em 26/11/2026) + redução anual
+  da Lei 15.270/2025 (art. 11-A da Lei 9.250) a partir de 2026; só o resultado rural, sem outros rendimentos.
+  Sempre exibir `AVISO_ESTIMATIVA`. Ano novo = cadastrar a tabela (senão usa a mais próxima, com aviso).
+- IRPF é por CPF (art. 13): o painel nunca calcula imposto sobre a soma consolidada dos produtores.
+- Obrigatoriedade do LCDPR: receita bruta > R$ 4.800.000,00 (IN SRF 83/2001, art. 23-A, redação da
+  IN RFB 1.903/2019; conferido em 26/11/2026). Prazo = prazo da DIRPF.
+- Prejuízo no Planejamento: encadeado pelos anos carregados supondo apuração pelo resultado real.
 - Lei nº 9.250/1995, art. 18 (citado no briefing) NÃO foi conferido no texto oficial: validar antes de citar.
 - Projeção: sazonal pelo ano anterior quando houver; senão média mensal. Simulação sempre
   mostra os cuidados (pagamento até 31/12, substância econômica).

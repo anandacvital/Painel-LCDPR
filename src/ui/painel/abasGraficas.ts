@@ -17,13 +17,13 @@ import {
 } from '../../domain/destaques';
 import { formatarReais } from '../../domain/dinheiro';
 import { formatarCpfCnpj } from '../../domain/documentos';
-import { AVISO_ESTIMATIVA, calcularIrpf } from '../../domain/irpf';
+import { AVISO_ESTIMATIVA } from '../../domain/irpf';
 import { TIPO_DOC, TIPO_EXPLORACAO } from '../../parser/leiaute';
 import type { ResultadoAnalise } from '../../parser/modelo';
 import { COR, desenharGrafico, eixoMeses, eixoValor, MESES_CURTOS, reaisCompacto } from '../graficos/echarts';
 import { esc, numeroBR } from '../html';
 import { cartaoKpi, molduraGrafico, pctTexto } from './componentes';
-import { avisoPrevia, montarVisao, nomeConta, nomeImovel, textoComparacao, type Visao } from './contexto';
+import { avisoPrevia, montarVisao, TEXTO_OPCAO, nomeConta, nomeImovel, textoComparacao, type Visao } from './contexto';
 
 const el = (raiz: HTMLElement, id: string): HTMLElement => raiz.querySelector<HTMLElement>(`#${id}`)!;
 const vals = (meses: readonly TotalMensal[], campo: 'receitas' | 'despesas' | 'resultado' | 'acumulado') => meses.map((m) => m[campo]);
@@ -34,9 +34,7 @@ const vals = (meses: readonly TotalMensal[], campo: 'receitas' | 'despesas' | 'r
 export function abaVisaoExecutiva(raiz: HTMLElement, v: Visao): void {
   const t = v.totais;
   const a = v.anterior?.totais;
-  const irpf = calcularIrpf({ receitaBruta: t.receitas, despesas: t.despesas });
-  const irpfAnt = a ? calcularIrpf({ receitaBruta: a.receitas, despesas: a.despesas }) : null;
-  const melhor = (r: typeof irpf) => (r.maisVantajosa === 'presumido' ? r.presumido.impostoEstimado : r.real.impostoEstimado);
+  const irpf = v.irpf.atual;
   const destaques = destaquesExecutivos(t, v.meses, a, textoComparacao(v));
   const vs = textoComparacao(v);
 
@@ -49,10 +47,10 @@ export function abaVisaoExecutiva(raiz: HTMLElement, v: Visao): void {
       ${cartaoKpi({ rotulo: 'Margem', valor: null, formatado: pctTexto(t.margem), atualComparavel: t.margem ?? undefined, anterior: a?.margem ?? null, vs, emPontos: true })}
       ${cartaoKpi({
         rotulo: 'IRPF estimado',
-        valor: melhor(irpf),
-        anterior: irpfAnt ? melhor(irpfAnt) : null, vs,
+        valor: irpf.imposto,
+        anterior: v.irpf.anterior?.imposto ?? null, vs,
         maiorEhMelhor: false,
-        texto: `${irpf.maisVantajosa === 'presumido' ? 'pela opção de 20% da receita bruta' : 'pelo resultado real'}${v.previa ? ' (parcial, só o período da prévia)' : ''}`,
+        texto: `${TEXTO_OPCAO[irpf.opcao]}${v.previa ? ' (parcial, só o período da prévia; veja a projeção em Planejamento IRPF)' : ''}`,
       })}
     </div>
     <p class="nota-estimativa">${esc(AVISO_ESTIMATIVA)}</p>

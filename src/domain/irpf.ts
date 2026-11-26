@@ -18,27 +18,90 @@
  * artigo NÃO foi conferido pelo painel (fonte indisponível): validar antes de citar
  * em relatório.
  *
- * O IMPOSTO É SÓ UMA ESTIMATIVA: base × 27,5% (alíquota marginal máxima). O valor
- * real depende da declaração completa (outros rendimentos, deduções, parcela a
- * deduzir da tabela progressiva). O painel deixa isso explícito.
+ * O IMPOSTO É SÓ UMA ESTIMATIVA: aplica a TABELA PROGRESSIVA ANUAL do ano-calendário
+ * ao resultado tributável da atividade rural, como se ele fosse o único rendimento
+ * da pessoa (sem outros rendimentos, deduções ou desconto simplificado). O painel
+ * deixa isso explícito em AVISO_ESTIMATIVA.
+ *
+ * Tabelas anuais conferidas nas páginas "Tributação de 2024/2025/2026" da Receita
+ * Federal (gov.br/receitafederal/.../meu-imposto-de-renda/tabelas) em 26/11/2026.
+ * A partir do ano-calendário 2026 há também a redução anual da Lei nº 15.270/2025
+ * (art. 11-A da Lei nº 9.250/1995): até R$ 60.000,00 de rendimentos tributáveis,
+ * redução de até R$ 2.694,15 (imposto zero); de R$ 60.000,01 a R$ 88.200,00,
+ * redução = R$ 8.429,73 − 0,095575 × rendimentos; acima, nenhuma.
  */
 import type { TotalMensal } from './agregacoes';
 import type { Centavos } from './dinheiro';
 import type { ArquivoLcdpr } from '../parser/modelo';
 
-export const ALIQUOTA_MARGINAL = 0.275;
 export const PERCENTUAL_PRESUMIDO = 0.2;
 
 export const AVISO_ESTIMATIVA =
-  'Estimativa pela alíquota marginal de 27,5%. O imposto real depende da declaração completa: outros rendimentos, deduções e parcela a deduzir da tabela progressiva.';
+  'Estimativa pela tabela progressiva anual do ano, considerando só o resultado da atividade rural. O imposto real depende da declaração completa: outros rendimentos, deduções, imposto já pago e, a partir de 2026, a tributação mínima de altas rendas.';
 
-const imposto = (base: Centavos): Centavos => Math.round(Math.max(0, base) * ALIQUOTA_MARGINAL);
+/** Uma faixa da tabela progressiva anual: até `ate` (centavos), alíquota e parcela a deduzir. */
+interface Faixa {
+  ate: Centavos;
+  aliquota: number;
+  deduzir: Centavos;
+}
+
+const SEM_LIMITE = Number.MAX_SAFE_INTEGER;
+/** Faixas de 33.919,80 em diante são iguais nos três anos; muda a faixa isenta e as parcelas. */
+const montarTabela = (isento: Centavos, p1: Centavos, p2: Centavos, p3: Centavos, p4: Centavos): Faixa[] => [
+  { ate: isento, aliquota: 0, deduzir: 0 },
+  { ate: 3_391_980, aliquota: 0.075, deduzir: p1 },
+  { ate: 4_501_260, aliquota: 0.15, deduzir: p2 },
+  { ate: 5_597_616, aliquota: 0.225, deduzir: p3 },
+  { ate: SEM_LIMITE, aliquota: 0.275, deduzir: p4 },
+];
+
+/** Tabelas progressivas ANUAIS por ano-calendário (Receita Federal). */
+export const TABELAS_ANUAIS: Readonly<Record<number, Faixa[]>> = {
+  2024: montarTabela(2_696_320, 202_224, 456_623, 794_217, 1_074_098),
+  2025: montarTabela(2_846_720, 213_504, 467_903, 805_497, 1_085_378),
+  2026: montarTabela(2_914_560, 218_592, 472_991, 810_585, 1_090_466),
+};
+const ANOS_TABELA = Object.keys(TABELAS_ANUAIS).map(Number).sort((a, b) => a - b);
+
+/**
+ * Tabela do ano-calendário. Para ano fora da lista usa a mais próxima e avisa
+ * (`exata: false`): a tabela daquele ano precisa ser cadastrada aqui.
+ */
+export function tabelaDoAno(ano: number): { anoTabela: number; exata: boolean; faixas: Faixa[] } {
+  const anoTabela = ano < ANOS_TABELA[0]! ? ANOS_TABELA[0]! : ano > ANOS_TABELA.at(-1)! ? ANOS_TABELA.at(-1)! : ano;
+  return { anoTabela, exata: anoTabela === ano, faixas: TABELAS_ANUAIS[anoTabela]! };
+}
+
+/** Redução anual da Lei nº 15.270/2025 (a partir do ano-calendário 2026). */
+function reducaoAnual(rendimentos: Centavos, ano: number): Centavos {
+  if (ano < 2026 || rendimentos > 8_820_000) return 0;
+  if (rendimentos <= 6_000_000) return 269_415;
+  return Math.max(0, Math.round(842_973 - 0.095575 * rendimentos));
+}
+
+/**
+ * Imposto estimado sobre uma base anual pela tabela progressiva do ano
+ * (base × alíquota − parcela a deduzir), menos a redução anual a partir de 2026.
+ */
+export function impostoProgressivo(base: Centavos, ano: number): Centavos {
+  if (base <= 0) return 0;
+  const { faixas } = tabelaDoAno(ano);
+  const faixa = faixas.find((f) => base <= f.ate) ?? faixas.at(-1)!;
+  const bruto = Math.max(0, Math.round(base * faixa.aliquota) - faixa.deduzir);
+  return Math.max(0, bruto - Math.min(bruto, reducaoAnual(base, ano)));
+}
+
+/** Ano usado quando a entrada não informa (o da tabela mais recente). */
+const ANO_PADRAO = ANOS_TABELA.at(-1)!;
 
 export interface EntradaIrpf {
   receitaBruta: Centavos;
   despesas: Centavos;
   /** Saldo de prejuízos de anos anteriores ainda não compensado, informado pelo usuário. */
   prejuizoAnterior?: Centavos;
+  /** Ano-calendário (escolhe a tabela progressiva). Omitido = tabela mais recente. */
+  ano?: number;
 }
 
 export interface OpcaoReal {
@@ -72,6 +135,7 @@ export interface ResultadoIrpf {
 
 export function calcularIrpf(e: EntradaIrpf): ResultadoIrpf {
   const prejuizoAnterior = Math.max(0, e.prejuizoAnterior ?? 0);
+  const imposto = (base: Centavos): Centavos => impostoProgressivo(base, e.ano ?? ANO_PADRAO);
   const resultado = e.receitaBruta - e.despesas;
 
   // ---- Opção 1: resultado real (Livro Caixa) com compensação de prejuízo ----
@@ -94,9 +158,11 @@ export function calcularIrpf(e: EntradaIrpf): ResultadoIrpf {
     prejuizoPerdido: cabivel ? prejuizoAnterior : 0,
   };
 
+  // Compara pelo IMPOSTO (com a tabela progressiva, bases diferentes podem dar o
+  // mesmo imposto quando ambas ficam na faixa isenta).
   let maisVantajosa: ResultadoIrpf['maisVantajosa'] = 'real';
-  if (cabivel && presumido.base < real.base) maisVantajosa = 'presumido';
-  else if (cabivel && presumido.base === real.base) maisVantajosa = 'empate';
+  if (cabivel && presumido.impostoEstimado < real.impostoEstimado) maisVantajosa = 'presumido';
+  else if (cabivel && presumido.impostoEstimado === real.impostoEstimado) maisVantajosa = 'empate';
   const economiaNoAno = Math.abs(real.impostoEstimado - presumido.impostoEstimado) * (cabivel ? 1 : 0);
 
   const insights: string[] = [];
@@ -227,6 +293,21 @@ export interface ResultadoSimulacao {
 
 const melhorImposto = (r: ResultadoIrpf): Centavos =>
   r.presumido.cabivel ? Math.min(r.real.impostoEstimado, r.presumido.impostoEstimado) : r.real.impostoEstimado;
+
+/**
+ * PONTO DE EQUILÍBRIO: quanto de despesa a mais (paga até 31/12) faz o resultado
+ * real, já com a compensação do prejuízo, cair até 20% da receita bruta. Abaixo
+ * disso o resultado real passa a ser a opção mais vantajosa. Zero = o real já é
+ * a melhor opção (ou não há resultado positivo).
+ */
+export function pontoEquilibrio(e: EntradaIrpf): Centavos {
+  const prejuizo = Math.max(0, e.prejuizoAnterior ?? 0);
+  const resultado = e.receitaBruta - e.despesas;
+  if (resultado <= 0) return 0;
+  const baseReal = Math.max(0, resultado - prejuizo);
+  const basePresumida = Math.round(e.receitaBruta * PERCENTUAL_PRESUMIDO);
+  return Math.max(0, baseReal - basePresumida);
+}
 
 export function simular(base: EntradaIrpf, s: Simulacao): ResultadoSimulacao {
   const antecipar = Math.max(0, s.anteciparDespesas ?? 0);
