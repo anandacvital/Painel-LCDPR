@@ -86,7 +86,6 @@
 .avisos-consolidacao {
   display: flex;
   gap: var(--esp-2);
-  margin-top: var(--esp-3);
   padding: var(--esp-3);
   border-radius: var(--raio);
   background: var(--gp-atencao-fundo);
@@ -101,7 +100,7 @@
 .abas-painel {
   display: flex;
   gap: 2px;
-  margin: var(--esp-4) 0 var(--esp-3);
+  margin: 0;
   border-bottom: 2px solid var(--gp-borda);
   overflow-x: auto;
 }
@@ -412,4 +411,48 @@ details > summary h3 {
 .tabela-virtual tbody tr:not(.espaco) td.num {
   max-width: none;
   overflow: visible;
+}
+
+/* Celular: campos ocupam a largura toda, sem empurrar a página para o lado. */
+.barra-painel label,
+.filtros-detalhe label {
+  min-width: 0;
+}
+.barra-painel select {
+  width: 100%;
+}
+@media (max-width: 720px) {
+  .barra-painel {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .barra-painel .criterio {
+    flex: none;
+  }
+  .barra-painel label {
+    width: 100%;
+  }
+  .barra-painel select {
+    min-width: 0;
+    box-sizing: border-box;
+  }
+  .indicador-saude {
+    flex-wrap: wrap;
+    justify-content: center;
+    white-space: normal;
+    text-align: center;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  .grade-kpi-painel {
+    grid-template-columns: 1fr 1fr;
+  }
+  .kpi-painel-valor {
+    font-size: 1rem;
+  }
+}
+@media (max-width: 420px) {
+  .grade-kpi-painel {
+    grid-template-columns: 1fr;
+  }
 }
