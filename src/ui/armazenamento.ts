@@ -14,13 +14,16 @@
  * corporativo): nesse caso o painel funciona só em memória.
  */
 import type { Cenario } from '../domain/cenarios';
+import type { Natureza } from '../domain/naturezas';
 import type { ResultadoAnalise } from '../parser/modelo';
 
 const BANCO = 'painel-lcdpr';
 const LOJA = 'analises';
 /** Cenários do simulador de IRPF (versão 2 do banco). Só valores digitados, nada do TXT. */
 const LOJA_CENARIOS = 'cenarios';
-const VERSAO = 2;
+/** Reclassificações de natureza de despesa feitas pela pessoa (versão 3 do banco). */
+const LOJA_AJUSTES = 'ajustes';
+const VERSAO = 3;
 const CHAVE_PREFERENCIA = 'painel-lcdpr:manter-dados';
 
 function abrir(): Promise<IDBDatabase> {
@@ -31,6 +34,7 @@ function abrir(): Promise<IDBDatabase> {
       const nomes = req.result.objectStoreNames;
       if (!nomes.contains(LOJA)) req.result.createObjectStore(LOJA);
       if (!nomes.contains(LOJA_CENARIOS)) req.result.createObjectStore(LOJA_CENARIOS);
+      if (!nomes.contains(LOJA_AJUSTES)) req.result.createObjectStore(LOJA_AJUSTES);
     };
     req.onsuccess = () => resolver(req.result);
     req.onerror = () => rejeitar(req.error ?? new Error('IndexedDB indisponível'));
@@ -105,6 +109,23 @@ export async function carregarCenarios(): Promise<Cenario[]> {
     return ((await transacao('readonly', (l) => l.get('todos') as IDBRequest<Cenario[] | undefined>, LOJA_CENARIOS)) ?? []);
   } catch {
     return [];
+  }
+}
+
+/** Grava as reclassificações de natureza (histórico normalizado → natureza). */
+export async function salvarAjustes(ajustes: Readonly<Record<string, Natureza>>): Promise<void> {
+  try {
+    await transacao('readwrite', (l) => l.put({ ...ajustes }, 'naturezas'), LOJA_AJUSTES);
+  } catch {
+    /* sem IndexedDB: segue só em memória */
+  }
+}
+
+export async function carregarAjustes(): Promise<Record<string, Natureza>> {
+  try {
+    return ((await transacao('readonly', (l) => l.get('naturezas') as IDBRequest<Record<string, Natureza> | undefined>, LOJA_AJUSTES)) ?? {});
+  } catch {
+    return {};
   }
 }
 

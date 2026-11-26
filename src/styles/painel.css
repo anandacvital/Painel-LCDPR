@@ -804,3 +804,327 @@ details > summary h3 {
 .acoes-cenario .botao-link {
   font-family: var(--fonte-texto);
 }
+
+/* ===================================================================
+ * PAINEL INTERATIVO: período, filtro cruzado, alertas e gestão
+ * =================================================================== */
+.barra-painel input[type='month'] {
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 400;
+  padding: 6px 10px;
+  border: 1px solid var(--gp-borda);
+  border-radius: 8px;
+  background: var(--gp-branco);
+  color: var(--gp-texto);
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Faixa "Filtrando:" com chips removíveis */
+.faixa-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--esp-2);
+  padding: var(--esp-2) var(--esp-3);
+  border: 1px solid var(--gp-azul-3);
+  border-radius: var(--raio);
+  background: var(--gp-fundo);
+}
+.faixa-filtros-rotulo {
+  font-weight: 700;
+  color: var(--gp-navy);
+}
+.faixa-filtros-total {
+  margin-left: auto;
+  font-size: 0.85rem;
+  color: var(--gp-texto-suave);
+}
+.chip-filtro {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 5px 8px 5px 12px;
+  border: 1px solid var(--gp-azul-2);
+  border-radius: 999px;
+  background: var(--gp-branco);
+  color: var(--gp-navy);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+.chip-filtro svg {
+  width: 14px;
+  height: 14px;
+  flex: none;
+}
+.chip-filtro:hover,
+.chip-filtro:focus-visible {
+  background: var(--gp-fundo);
+}
+.dica-filtro {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--gp-texto-suave);
+}
+.nota-ano-civil {
+  display: flex;
+  gap: var(--esp-2);
+  align-items: flex-start;
+  margin: 0 0 var(--esp-3);
+  padding: var(--esp-2) var(--esp-3);
+  border-radius: 10px;
+  background: var(--gp-fundo);
+  color: var(--gp-navy);
+  font-size: 0.9rem;
+}
+.nota-ano-civil svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+}
+
+/* Alertas acionáveis */
+.quadro-alertas {
+  padding: var(--esp-3) var(--esp-4);
+}
+.quadro-alertas > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--esp-2) var(--esp-3);
+  cursor: pointer;
+}
+.quadro-alertas > summary h2 {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--esp-2);
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--gp-navy);
+}
+.quadro-alertas > summary h2 svg {
+  width: 20px;
+  height: 20px;
+  color: var(--gp-alerta);
+}
+.contagem-alertas {
+  font-size: 0.85rem;
+  color: var(--gp-texto-suave);
+}
+.lista-alertas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-2);
+  margin: var(--esp-3) 0 var(--esp-2);
+  padding: 0;
+  list-style: none;
+}
+.alerta {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--esp-2) var(--esp-3);
+  padding: var(--esp-2) var(--esp-3);
+  border-left: 4px solid var(--gp-azul-2);
+  border-radius: 8px;
+  background: var(--gp-fundo);
+}
+.alerta p {
+  margin: 2px 0 0;
+  font-size: 0.88rem;
+  color: var(--gp-texto-suave);
+}
+.alerta-risco {
+  border-left-color: var(--gp-alerta);
+  background: var(--gp-alerta-fundo);
+}
+.alerta-atencao {
+  border-left-color: var(--gp-atencao);
+  background: var(--gp-atencao-fundo);
+}
+.alerta-oportunidade {
+  border-left-color: var(--gp-agro);
+  background: var(--gp-agro-fundo);
+}
+.selo-nivel {
+  align-self: start;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  background: var(--gp-branco);
+  color: var(--gp-azul-1);
+}
+.alerta-risco .selo-nivel {
+  color: var(--gp-alerta);
+}
+.alerta-atencao .selo-nivel {
+  color: var(--gp-atencao);
+}
+.alerta-oportunidade .selo-nivel {
+  color: var(--gp-agro);
+}
+.alerta .botao-sec {
+  white-space: nowrap;
+}
+@media (max-width: 720px) {
+  .alerta {
+    grid-template-columns: 1fr;
+  }
+  .alerta .botao-sec {
+    justify-self: start;
+    white-space: normal;
+  }
+  .quadro-alertas {
+    padding: var(--esp-3);
+  }
+  .faixa-filtros-total {
+    margin-left: 0;
+    width: 100%;
+  }
+}
+
+/* Indicadores de gestão (Visão Executiva) */
+.secao-gestao {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-3);
+}
+.titulo-secao {
+  margin: var(--esp-2) 0 0;
+  font-size: 1.05rem;
+  color: var(--gp-navy);
+}
+.grade-gestao {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--esp-3);
+}
+.cartao-gestao {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-top: 4px solid var(--gp-azul-2);
+}
+.cartao-gestao.tom-negativo {
+  border-top-color: var(--gp-alerta);
+}
+.cartao-gestao.tom-negativo .kpi-painel-valor {
+  color: var(--gp-alerta);
+}
+.cartao-gestao.tom-positivo {
+  border-top-color: var(--gp-agro);
+}
+.cartao-gestao p {
+  margin: 0;
+}
+.cartao-gestao .botao-link {
+  align-self: flex-start;
+}
+.ajuste-naturezas > summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--gp-azul-1);
+}
+.ajuste-naturezas select {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 4px 6px;
+  border: 1px solid var(--gp-borda);
+  border-radius: 6px;
+  max-width: 260px;
+}
+.origem {
+  font-size: 0.78rem;
+  white-space: nowrap;
+  color: var(--gp-texto-suave);
+}
+.origem-sem-regra,
+.origem-participante {
+  color: var(--gp-atencao);
+  font-weight: 600;
+}
+.origem-ajuste {
+  color: var(--gp-agro);
+  font-weight: 600;
+}
+
+/* Itens escolhidos no filtro cruzado */
+.linha-escolhida td {
+  background: var(--gp-fundo);
+  font-weight: 600;
+}
+.cartao-escolhido {
+  outline: 3px solid var(--gp-azul-2);
+}
+.saldos-mes {
+  margin: 4px 0 0;
+  font-size: 0.88rem;
+  color: var(--gp-navy);
+}
+.saldos-mes:empty {
+  display: none;
+}
+
+/* Menu de impressão: unificado/separado e mês do Livro Caixa */
+.modo-relatorio {
+  margin: 0 0 6px;
+  padding: 6px 12px 8px;
+  border: 0;
+  border-bottom: 1px solid var(--gp-borda);
+}
+.modo-relatorio legend {
+  padding: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--gp-texto-suave);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.modo-relatorio label {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.modo-relatorio small {
+  display: block;
+  margin-left: 22px;
+}
+.item-livro {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 8px;
+}
+.item-livro > button {
+  flex: 1;
+}
+.item-livro label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-right: 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--gp-texto-suave);
+}
+.item-livro select {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 4px 6px;
+  border: 1px solid var(--gp-borda);
+  border-radius: 6px;
+}
+.menu-imprimir-opcoes .ajuda {
+  margin: 6px 12px 2px;
+}

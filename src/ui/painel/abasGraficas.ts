@@ -20,23 +20,61 @@ import { formatarCpfCnpj } from '../../domain/documentos';
 import { AVISO_ESTIMATIVA } from '../../domain/irpf';
 import { TIPO_DOC, TIPO_EXPLORACAO } from '../../parser/leiaute';
 import type { ResultadoAnalise } from '../../parser/modelo';
-import { COR, desenharGrafico, eixoMeses, eixoValor, MESES_CURTOS, reaisCompacto } from '../graficos/echarts';
+import { rotulosEixo } from '../../domain/periodo';
+import { filtroAtivo } from '../../domain/gestao';
+import { COR, desenharGrafico, eixoMeses, eixoValor, reaisCompacto } from '../graficos/echarts';
 import { esc, numeroBR } from '../html';
 import { cartaoKpi, molduraGrafico, pctTexto } from './componentes';
 import { avisoPrevia, montarVisao, TEXTO_OPCAO, nomeConta, nomeImovel, textoComparacao, type Visao } from './contexto';
+import { aoClicar, desenharGestao, htmlGestao, type AcoesPainel } from './gestao';
 
 const el = (raiz: HTMLElement, id: string): HTMLElement => raiz.querySelector<HTMLElement>(`#${id}`)!;
 const vals = (meses: readonly TotalMensal[], campo: 'receitas' | 'despesas' | 'resultado' | 'acumulado') => meses.map((m) => m[campo]);
 
+/** Opacidade: com um item escolhido no filtro, os outros ficam apagados. */
+const opac = (escolhido: string | undefined, valor: string): number => (escolhido && escolhido !== valor ? 0.3 : 1);
+
+/** Barras mensais com o mês do filtro em destaque. */
+const barrasMes = (v: Visao, campo: 'receitas' | 'despesas', cor: string) =>
+  v.meses.map((m) => ({ value: m[campo], itemStyle: { color: cor, opacity: opac(v.filtro.mes, m.mes), borderRadius: [4, 4, 0, 0] } }));
+
+/**
+ * Clique num mês filtra o painel por aquele mês: vale clicar na barra, no
+ * rótulo do eixo ou em qualquer ponto da coluna do mês (mais fácil no celular).
+ */
+function clicarMes(g: Parameters<typeof aoClicar>[0], v: Visao, acoes: AcoesPainel): void {
+  let tratado = false;
+  aoClicar(g, (i) => {
+    const m = v.meses[i];
+    if (!m) return;
+    tratado = true;
+    acoes.filtrar('mes', m.mes);
+  });
+  g.getZr().on('click', (e) => {
+    // Espera o clique da barra (se houver) para não filtrar duas vezes.
+    setTimeout(() => {
+      if (tratado) { tratado = false; return; }
+      // Só dentro da área do gráfico ou na faixa dos rótulos do eixo (não na legenda).
+      const ponto = [e.offsetX, e.offsetY];
+      if (!g.containPixel({ gridIndex: 0 }, ponto) && !g.containPixel({ gridIndex: 0 }, [e.offsetX, e.offsetY - 28])) return;
+      const x = g.convertFromPixel({ xAxisIndex: 0 }, [e.offsetX, e.offsetY]) as unknown;
+      const i = Array.isArray(x) ? Number(x[0]) : Number(x);
+      if (Number.isInteger(i) && v.meses[i]) acoes.filtrar('mes', v.meses[i]!.mes);
+    }, 0);
+  });
+}
+
 // ===========================================================================
 // 1. VISÃO EXECUTIVA
 // ===========================================================================
-export function abaVisaoExecutiva(raiz: HTMLElement, v: Visao): void {
+export function abaVisaoExecutiva(raiz: HTMLElement, v: Visao, acoes: AcoesPainel): void {
   const t = v.totais;
   const a = v.anterior?.totais;
-  const irpf = v.irpf.atual;
+  const irpf = v.irpf?.atual ?? null;
   const destaques = destaquesExecutivos(t, v.meses, a, textoComparacao(v));
   const vs = textoComparacao(v);
+  const rotulos = rotulosEixo(v.meses.map((m) => m.mes));
+  const comFiltro = filtroAtivo(v.filtro);
 
   raiz.innerHTML = `
     ${v.previa ? `<div class="aviso-previa" role="note"><strong>Prévia do ano em andamento.</strong> ${esc(avisoPrevia(v))}</div>` : ''}
@@ -45,30 +83,32 @@ export function abaVisaoExecutiva(raiz: HTMLElement, v: Visao): void {
       ${cartaoKpi({ rotulo: 'Despesas', valor: t.despesas, tom: 'despesa', anterior: a?.despesas ?? null, vs, maiorEhMelhor: false })}
       ${cartaoKpi({ rotulo: 'Resultado', valor: t.resultado, tom: t.resultado < 0 ? 'negativo' : 'positivo', anterior: a?.resultado ?? null, vs })}
       ${cartaoKpi({ rotulo: 'Margem', valor: null, formatado: pctTexto(t.margem), atualComparavel: t.margem ?? undefined, anterior: a?.margem ?? null, vs, emPontos: true })}
-      ${cartaoKpi({
+      ${irpf ? cartaoKpi({
         rotulo: 'IRPF estimado',
         valor: irpf.imposto,
-        anterior: v.irpf.anterior?.imposto ?? null, vs,
+        anterior: v.irpf?.anterior?.imposto ?? null, vs,
         maiorEhMelhor: false,
-        texto: `${TEXTO_OPCAO[irpf.opcao]}${v.previa ? ' (parcial, só o período da prévia; veja a projeção em Planejamento IRPF)' : ''}`,
-      })}
+        texto: `${TEXTO_OPCAO[irpf.opcao]}${v.previa ? ' (parcial, só o período da prévia; veja a projeção em Planejamento IRPF)' : ''}${comFiltro ? '. Do ano todo: não muda com o filtro' : ''}`,
+      }) : cartaoKpi({ rotulo: 'IRPF estimado', valor: null, texto: 'O IRPF é anual: escolha "Ano civil" no Período para ver a estimativa.' })}
     </div>
-    <p class="nota-estimativa">${esc(AVISO_ESTIMATIVA)}</p>
+    ${irpf ? `<p class="nota-estimativa">${esc(AVISO_ESTIMATIVA)}</p>` : ''}
+
+    ${htmlGestao(v)}
 
     <section class="card destaques">
-      <h3>Destaques do ano</h3>
+      <h3>Destaques ${esc(v.termos.do)}</h3>
       <ol>${destaques.map((d) => `<li>${esc(d)}</li>`).join('')}</ol>
     </section>
 
-    ${molduraGrafico('g-exec', tituloReceitasDespesas(v.meses), 'Barras: receitas e despesas do mês. Linha: resultado acumulado no ano.', 360)}
+    ${molduraGrafico('g-exec', tituloReceitasDespesas(v.meses, v.termos), `Barras: receitas e despesas do mês. Linha: resultado acumulado ${v.termos.no}. Clique num mês para filtrar.`, 360)}
   `;
 
-  desenharGrafico(el(raiz, 'g-exec'), {
-    xAxis: eixoMeses(),
+  const g = desenharGrafico(el(raiz, 'g-exec'), {
+    xAxis: eixoMeses(rotulos),
     yAxis: eixoValor(),
     series: [
-      { name: 'Receitas', type: 'bar', data: vals(v.meses, 'receitas'), itemStyle: { color: COR.receita, borderRadius: [4, 4, 0, 0] } },
-      { name: 'Despesas', type: 'bar', data: vals(v.meses, 'despesas'), itemStyle: { color: COR.despesa, borderRadius: [4, 4, 0, 0] } },
+      { name: 'Receitas', type: 'bar', cursor: 'pointer', data: barrasMes(v, 'receitas', COR.receita), itemStyle: { color: COR.receita } },
+      { name: 'Despesas', type: 'bar', cursor: 'pointer', data: barrasMes(v, 'despesas', COR.despesa), itemStyle: { color: COR.despesa } },
       {
         name: 'Resultado acumulado', type: 'line', data: vals(v.meses, 'acumulado'), smooth: true, symbolSize: 7,
         lineStyle: { width: 3, color: COR.navy }, itemStyle: { color: COR.navy },
@@ -76,85 +116,94 @@ export function abaVisaoExecutiva(raiz: HTMLElement, v: Visao): void {
       },
     ],
   });
+  clicarMes(g, v, acoes);
+  desenharGestao(raiz, v, acoes);
 }
 
 // ===========================================================================
 // 2. FLUXO DE CAIXA
 // ===========================================================================
-export function abaFluxoCaixa(raiz: HTMLElement, v: Visao): void {
+export function abaFluxoCaixa(raiz: HTMLElement, v: Visao, acoes: AcoesPainel): void {
   const res = vals(v.meses, 'resultado');
+  const rotulos = rotulosEixo(v.meses.map((m) => m.mes));
   // Cascata: barra invisível de apoio + barra do resultado do mês.
+  // stackStrategy 'all': empilha mesmo quando o apoio é negativo (caixa abaixo de zero).
   let acumulado = 0;
   const apoio: number[] = [];
-  const positivo: (number | string)[] = [];
-  const negativo: (number | string)[] = [];
+  const positivo: number[] = [];
+  const negativo: number[] = [];
   for (const r of res) {
     const inicio = acumulado;
     acumulado += r;
     apoio.push(Math.min(inicio, acumulado));
-    positivo.push(r >= 0 ? r : '-');
-    negativo.push(r < 0 ? -r : '-');
+    // Zero (e não "-") para a pilha não quebrar no mês sem valor naquela série.
+    positivo.push(r >= 0 ? r : 0);
+    negativo.push(r < 0 ? -r : 0);
   }
   const negativos = v.meses.map((m, i) => ({ m, i })).filter(({ m }) => m.quantidade > 0 && m.resultado < 0);
   const totalRec = v.meses.reduce((s, m) => s + Math.max(0, m.receitas), 0);
 
   raiz.innerHTML = `
-    ${molduraGrafico('g-cascata', tituloFluxoCaixa(v.meses), 'Cascata: cada barra é o resultado do mês (verde soma, vermelho subtrai) partindo do acumulado anterior.', 340)}
+    ${molduraGrafico('g-cascata', tituloFluxoCaixa(v.meses, v.termos), 'Cascata: cada barra é o resultado do mês (verde soma, vermelho subtrai) partindo do acumulado anterior. Clique num mês para filtrar.', 340)}
     <div class="duas-colunas">
-      ${molduraGrafico('g-saldo', negativos.length ? `Meses com resultado negativo: ${negativos.map(({ m }) => nomeMes(m.mes)).join(', ')}` : 'Nenhum mês com resultado negativo', 'Resultado acumulado no ano; faixas vermelhas marcam os meses com resultado negativo.', 300)}
-      ${molduraGrafico('g-sazonal', tituloSazonalidade(v.meses), 'Participação de cada mês na receita do ano.', 300)}
+      ${molduraGrafico('g-saldo', negativos.length ? `Meses com resultado negativo: ${negativos.map(({ m }) => nomeMes(m.mes)).join(', ')}` : 'Nenhum mês com resultado negativo', `Resultado acumulado ${v.termos.no}; faixas vermelhas marcam os meses com resultado negativo.`, 300)}
+      ${molduraGrafico('g-sazonal', tituloSazonalidade(v.meses, v.termos), `Participação de cada mês na receita ${v.termos.do}.`, 300)}
     </div>
   `;
 
-  desenharGrafico(el(raiz, 'g-cascata'), {
+  const gCascata = desenharGrafico(el(raiz, 'g-cascata'), {
     tooltip: {
       trigger: 'axis',
       formatter: (p: unknown) => {
         const i = (p as { dataIndex: number }[])[0]?.dataIndex ?? 0;
         const m = v.meses[i]!;
-        return `<strong>${MESES_CURTOS[i]}</strong><br/>Resultado do mês: ${formatarReais(m.resultado)}<br/>Acumulado: ${formatarReais(m.acumulado)}`;
+        return `<strong>${rotulos[i]}</strong><br/>Resultado do mês: ${formatarReais(m.resultado)}<br/>Acumulado: ${formatarReais(m.acumulado)}`;
       },
     },
     legend: { show: false },
-    xAxis: eixoMeses(),
+    xAxis: eixoMeses(rotulos),
     yAxis: eixoValor(),
     series: [
-      { type: 'bar', stack: 'c', data: apoio, itemStyle: { color: 'transparent' }, emphasis: { disabled: true } },
-      { name: 'Entrou no caixa', type: 'bar', stack: 'c', data: positivo, itemStyle: { color: COR.receita, borderRadius: 3 } },
-      { name: 'Saiu do caixa', type: 'bar', stack: 'c', data: negativo, itemStyle: { color: COR.negativo, borderRadius: 3 } },
+      { type: 'bar', stack: 'c', stackStrategy: 'all', data: apoio, itemStyle: { color: 'transparent' }, emphasis: { disabled: true } },
+      { name: 'Entrou no caixa', type: 'bar', stack: 'c', stackStrategy: 'all', cursor: 'pointer', data: positivo.map((x, i) => ({ value: x, itemStyle: { opacity: opac(v.filtro.mes, v.meses[i]!.mes) } })), itemStyle: { color: COR.receita, borderRadius: 3 } },
+      { name: 'Saiu do caixa', type: 'bar', stack: 'c', stackStrategy: 'all', cursor: 'pointer', data: negativo.map((x, i) => ({ value: x, itemStyle: { opacity: opac(v.filtro.mes, v.meses[i]!.mes) } })), itemStyle: { color: COR.negativo, borderRadius: 3 } },
     ],
   });
+  clicarMes(gCascata, v, acoes);
 
-  desenharGrafico(el(raiz, 'g-saldo'), {
+  const gSaldo = desenharGrafico(el(raiz, 'g-saldo'), {
     legend: { show: false },
-    xAxis: eixoMeses(),
+    xAxis: eixoMeses(rotulos),
     yAxis: eixoValor(),
     series: [{
       name: 'Resultado acumulado', type: 'line', data: vals(v.meses, 'acumulado'), smooth: true, areaStyle: { color: 'rgba(43,108,196,0.12)' },
       lineStyle: { width: 3, color: COR.azul2 }, itemStyle: { color: COR.azul2 },
-      markArea: { silent: true, itemStyle: { color: 'rgba(192,0,29,0.08)' }, data: negativos.map(({ i }) => [{ xAxis: MESES_CURTOS[i] }, { xAxis: MESES_CURTOS[i] }]) },
+      markArea: { silent: true, itemStyle: { color: 'rgba(192,0,29,0.08)' }, data: negativos.map(({ i }) => [{ xAxis: rotulos[i] }, { xAxis: rotulos[i] }]) },
       markLine: { silent: true, symbol: 'none', data: [{ yAxis: 0 }], lineStyle: { color: COR.negativo, type: 'dashed' }, label: { show: false } },
     }],
   });
 
-  desenharGrafico(el(raiz, 'g-sazonal'), {
+  clicarMes(gSaldo, v, acoes);
+  const gSazonal = desenharGrafico(el(raiz, 'g-sazonal'), {
     legend: { show: false },
     tooltip: { trigger: 'axis', valueFormatter: (x: unknown) => `${Number(x).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%` },
-    xAxis: eixoMeses(),
+    xAxis: eixoMeses(rotulos),
     yAxis: { type: 'value', axisLabel: { formatter: '{value}%', color: COR.textoSuave }, splitLine: { lineStyle: { color: COR.grade } } },
     series: [{
-      name: 'Parte da receita do ano', type: 'bar',
-      data: v.meses.map((m) => (totalRec > 0 ? Math.round((Math.max(0, m.receitas) / totalRec) * 1000) / 10 : 0)),
+      name: `Parte da receita ${v.termos.do}`, type: 'bar', cursor: 'pointer',
+      data: v.meses.map((m) => ({ value: totalRec > 0 ? Math.round((Math.max(0, m.receitas) / totalRec) * 1000) / 10 : 0, itemStyle: { opacity: opac(v.filtro.mes, m.mes) } })),
       itemStyle: { color: COR.receita, borderRadius: [4, 4, 0, 0] },
     }],
   });
+  clicarMes(gSazonal, v, acoes);
 }
 
 // ===========================================================================
 // 3. RECEITAS & DESPESAS
 // ===========================================================================
-export function abaReceitasDespesas(raiz: HTMLElement, v: Visao): void {
-  const participantes = agruparPor(v.lancamentos, (l) => l.idPartic);
+export function abaReceitasDespesas(raiz: HTMLElement, v: Visao, acoes: AcoesPainel): void {
+  // Clientes e fornecedores ignoram o filtro de participante: o escolhido fica em destaque.
+  const participantes = agruparPor(v.recorte('participante'), (l) => l.idPartic);
   const clientes = participantes.filter((g) => g.receitas > 0).sort((a, b) => b.receitas - a.receitas).slice(0, 10);
   const fornecedores = participantes.filter((g) => g.despesas > 0).sort((a, b) => b.despesas - a.despesas).slice(0, 10);
   const porDoc = agruparPor(v.lancamentos, (l) => l.tipoDoc);
@@ -164,8 +213,8 @@ export function abaReceitasDespesas(raiz: HTMLElement, v: Visao): void {
 
   raiz.innerHTML = `
     <div class="duas-colunas">
-      ${molduraGrafico('g-clientes', tituloConcentracao(clientes, 'receitas', 'receitas'), 'Top 10 por CPF/CNPJ (o LCDPR não traz o nome do participante).', 380)}
-      ${molduraGrafico('g-fornecedores', tituloConcentracao(fornecedores, 'despesas', 'despesas'), 'Top 10 por CPF/CNPJ.', 380)}
+      ${molduraGrafico('g-clientes', tituloConcentracao(clientes, 'receitas', 'receitas'), 'Top 10 por CPF/CNPJ (o LCDPR não traz o nome do participante). Clique para filtrar.', 380)}
+      ${molduraGrafico('g-fornecedores', tituloConcentracao(fornecedores, 'despesas', 'despesas'), 'Top 10 por CPF/CNPJ. Clique para filtrar.', 380)}
     </div>
     <div class="duas-colunas">
       ${molduraGrafico('g-docs', maiorDoc ? `${TIPO_DOC[maiorDoc.chave] ?? maiorDoc.chave} sustenta ${pctTexto(maiorDoc.despesas / Math.max(1, v.totais.despesas))} das despesas` : 'Sem despesas', 'Despesas por tipo de documento: quanto mais "Outros" e "Recibo", menor a força da comprovação.', 300)}
@@ -174,13 +223,14 @@ export function abaReceitasDespesas(raiz: HTMLElement, v: Visao): void {
     <section class="card">
       <details>
         <summary><h3>Tabela mensal</h3></summary>
+        <p class="ajuda">Clique num mês para filtrar o painel.</p>
         <div class="tabela-rolagem">
           <table class="tabela">
             <thead><tr><th>Mês</th><th class="num">Receitas</th><th class="num">Despesas</th><th class="num">Resultado</th><th class="num">Acumulado</th><th class="num">Lançamentos</th></tr></thead>
             <tbody>
               ${v.meses.map((m) => `
-                <tr>
-                  <td>${esc(nomeMes(m.mes))}</td>
+                <tr class="linha-clicavel ${v.filtro.mes === m.mes ? 'linha-escolhida' : ''}">
+                  <td><button type="button" class="botao-link" data-mes="${m.mes}">${esc(nomeMes(m.mes))}${v.periodo.tipo === 'ano' ? '' : `/${m.mes.slice(0, 4)}`}</button></td>
                   <td class="num">${formatarReais(m.receitas)}</td>
                   <td class="num">${formatarReais(m.despesas)}</td>
                   <td class="num ${m.resultado < 0 ? 'negativo' : ''}">${formatarReais(m.resultado)}</td>
@@ -195,15 +245,22 @@ export function abaReceitasDespesas(raiz: HTMLElement, v: Visao): void {
     </section>
   `;
 
-  const barrasH = (id: string, grupos: typeof clientes, campo: 'receitas' | 'despesas', cor: string) =>
-    desenharGrafico(el(raiz, id), {
+  raiz.querySelectorAll<HTMLButtonElement>('[data-mes]').forEach((b) => b.addEventListener('click', () => acoes.filtrar('mes', b.dataset.mes!)));
+  const barrasH = (id: string, grupos: typeof clientes, campo: 'receitas' | 'despesas', cor: string) => {
+    const g = desenharGrafico(el(raiz, id), {
       legend: { show: false },
       grid: { left: 8, right: 24, top: 8, bottom: 8, containLabel: true },
       tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
       xAxis: eixoValor(),
       yAxis: { type: 'category', inverse: true, data: grupos.map((g) => formatarCpfCnpj(g.chave)), axisLabel: { fontFamily: "'DM Mono', monospace", color: COR.textoSuave }, axisTick: { show: false } },
-      series: [{ name: campo === 'receitas' ? 'Receitas' : 'Despesas', type: 'bar', data: grupos.map((g) => g[campo]), itemStyle: { color: cor, borderRadius: [0, 4, 4, 0] } }],
+      series: [{
+        name: campo === 'receitas' ? 'Receitas' : 'Despesas', type: 'bar', cursor: 'pointer',
+        data: grupos.map((x) => ({ value: x[campo], itemStyle: { opacity: opac(v.filtro.participante, x.chave) } })),
+        itemStyle: { color: cor, borderRadius: [0, 4, 4, 0] },
+      }],
     });
+    aoClicar(g, (i) => { const x = grupos[i]; if (x) acoes.filtrar('participante', x.chave); });
+  };
   barrasH('g-clientes', clientes, 'receitas', COR.receita);
   barrasH('g-fornecedores', fornecedores, 'despesas', COR.despesa);
 
@@ -235,8 +292,9 @@ export function abaReceitasDespesas(raiz: HTMLElement, v: Visao): void {
 // ===========================================================================
 // 4. IMÓVEIS RURAIS
 // ===========================================================================
-export function abaImoveis(raiz: HTMLElement, v: Visao): void {
-  const grupos = agruparPor(v.lancamentos, (l) => `${l.cpf}|${l.codImovel}`).map((g) => {
+export function abaImoveis(raiz: HTMLElement, v: Visao, acoes: AcoesPainel): void {
+  // O gráfico e os cartões ignoram o filtro de imóvel: o escolhido fica em destaque.
+  const grupos = agruparPor(v.recorte('imovel'), (l) => `${l.cpf}|${l.codImovel}`).map((g) => {
     const [cpf, cod] = g.chave.split('|') as [string, string];
     return { ...g, cpf, codigo: cod, nome: nomeImovel(v, cpf, cod) };
   });
@@ -248,10 +306,10 @@ export function abaImoveis(raiz: HTMLElement, v: Visao): void {
   );
 
   raiz.innerHTML = `
-    ${molduraGrafico('g-imoveis', tituloImoveis(grupos), 'Resultado (receitas − despesas) de cada imóvel no ano.', Math.max(240, grupos.length * 44 + 60))}
+    ${molduraGrafico('g-imoveis', tituloImoveis(grupos), `Resultado (receitas − despesas) de cada imóvel ${v.termos.no}. Clique para filtrar.`, Math.max(240, grupos.length * 44 + 60))}
     <div class="grade-imoveis">
       ${cards.map(({ a, im, g }) => `
-        <article class="card cartao-imovel">
+        <article class="card cartao-imovel ${v.filtro.imovel === `${a.abertura?.cpf}|${im.codigo}` ? 'cartao-escolhido' : ''}">
           <header>
             <h3>${esc(im.nome || `Imóvel ${im.codigo}`)}</h3>
             <span class="selo">${esc(TIPO_EXPLORACAO[im.tipoExploracao] ?? 'Exploração ?')}</span>
@@ -270,23 +328,26 @@ export function abaImoveis(raiz: HTMLElement, v: Visao): void {
           ${a.terceiros.filter((t) => t.codImovel === im.codigo).length
             ? `<p class="ajuda">${a.terceiros.filter((t) => t.codImovel === im.codigo).length} terceiro(s) vinculado(s) no 0045.</p>`
             : ''}
+          <button type="button" class="botao-link" data-imovel="${esc(`${a.abertura?.cpf}|${im.codigo}`)}">${v.filtro.imovel === `${a.abertura?.cpf}|${im.codigo}` ? 'Tirar o filtro' : 'Filtrar o painel por este imóvel'}</button>
         </article>`).join('')}
     </div>
   `;
 
-  desenharGrafico(el(raiz, 'g-imoveis'), {
+  raiz.querySelectorAll<HTMLButtonElement>('[data-imovel]').forEach((b) => b.addEventListener('click', () => acoes.filtrar('imovel', b.dataset.imovel!)));
+  const gImoveis = desenharGrafico(el(raiz, 'g-imoveis'), {
     legend: { show: false },
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
     grid: { left: 8, right: 32, top: 8, bottom: 8, containLabel: true },
     xAxis: eixoValor(),
     yAxis: { type: 'category', inverse: true, data: grupos.map((g) => g.nome), axisTick: { show: false }, axisLabel: { color: COR.textoSuave } },
     series: [{
-      name: 'Resultado', type: 'bar',
-      data: grupos.map((g) => ({ value: g.resultado, itemStyle: { color: g.resultado < 0 ? COR.negativo : COR.receita } })),
+      name: 'Resultado', type: 'bar', cursor: 'pointer',
+      data: grupos.map((g) => ({ value: g.resultado, itemStyle: { color: g.resultado < 0 ? COR.negativo : COR.receita, opacity: opac(v.filtro.imovel, g.chave) } })),
       label: { show: true, position: 'right', formatter: (p: { value: number }) => reaisCompacto(p.value), color: COR.textoSuave },
       itemStyle: { borderRadius: 4 },
     }],
   });
+  aoClicar(gImoveis, (i) => { const g = grupos[i]; if (g) acoes.filtrar('imovel', g.chave); });
 }
 
 // ===========================================================================

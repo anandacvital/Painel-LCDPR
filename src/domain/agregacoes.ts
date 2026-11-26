@@ -77,6 +77,14 @@ export function porMes(arquivo: ArquivoLcdpr): TotalMensal[] {
 
 /** Mesma coisa que porMes, a partir de qualquer lista de lançamentos (ex.: consolidado). */
 export function mensal(lancamentos: readonly Lancamento[], ano: number): TotalMensal[] {
+  return mensalPeriodo(lancamentos, Array.from({ length: 12 }, (_, i) => `${ano}-${String(i + 1).padStart(2, '0')}`));
+}
+
+/**
+ * Totais mês a mês de uma lista de meses "AAAA-MM" em ordem (ano civil, safra
+ * ou período livre). O acumulado começa em zero no primeiro mês da lista.
+ */
+export function mensalPeriodo(lancamentos: readonly Lancamento[], meses: readonly string[]): TotalMensal[] {
   const grupos = new Map<string, Lancamento[]>();
   for (const l of lancamentos) {
     const chave = l.data.iso.slice(0, 7);
@@ -85,15 +93,12 @@ export function mensal(lancamentos: readonly Lancamento[], ano: number): TotalMe
     else grupos.set(chave, [l]);
   }
   let acumulado = 0;
-  const meses: TotalMensal[] = [];
-  for (let m = 1; m <= 12; m++) {
-    const chave = `${ano}-${String(m).padStart(2, '0')}`;
+  return meses.map((chave) => {
     const lista = grupos.get(chave) ?? [];
     const t = totalizar(lista);
     acumulado += t.resultado;
-    meses.push({ ...t, mes: chave, acumulado, saldoInformado: lista.at(-1)?.saldo ?? null });
-  }
-  return meses;
+    return { ...t, mes: chave, acumulado, saldoInformado: lista.at(-1)?.saldo ?? null };
+  });
 }
 
 export interface TotalPorChave extends Totais {

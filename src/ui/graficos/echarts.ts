@@ -70,9 +70,11 @@ export const eixoValor = () => ({
   splitLine: { lineStyle: { color: COR.grade } },
 });
 
-export const eixoMeses = () => ({
+/** Eixo de meses: padrão jan a dez; com `rotulos`, os meses do período (ex.: "jul/24"). */
+export const eixoMeses = (rotulos: readonly string[] = MESES_CURTOS) => ({
   type: 'category' as const,
-  data: MESES_CURTOS,
+  data: [...rotulos],
+  triggerEvent: true,
   axisTick: { show: false },
   axisLine: { lineStyle: { color: COR.grade } },
   axisLabel: { color: COR.textoSuave },

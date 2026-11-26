@@ -17,7 +17,7 @@ import { gerarCsv } from '../../report/csv';
 import { baixarArquivo, esc, numeroBR } from '../html';
 import { iconeDownload, iconeImpressora } from '../icones';
 import { imprimirDetalhamento } from '../../report/razoes';
-import { nomeConta, nomeImovel, type LancamentoVisao, type Visao } from './contexto';
+import { nomeConta, nomeImovel, saldoInicialMes, type LancamentoVisao, type Visao } from './contexto';
 
 /** Altura fixa de cada linha, em pixels (tem que bater com o CSS .tabela-virtual td). */
 const ALTURA_LINHA = 40;
@@ -46,7 +46,7 @@ export function abaDetalhamento(raiz: HTMLElement, v: Visao): void {
     return [...m.entries()].sort((a, b) => a[1].localeCompare(b[1], 'pt-BR'));
   };
   const prefixo = (l: LancamentoVisao): string => (v.individual ? '' : `${l.produtor} · `);
-  const meses = unicos((l) => [l.data.iso.slice(0, 7), nomeMes(l.data.iso.slice(0, 7))]).sort((a, b) => a[0].localeCompare(b[0]));
+  const meses = unicos((l) => [l.data.iso.slice(0, 7), `${nomeMes(l.data.iso.slice(0, 7))}/${l.data.iso.slice(0, 4)}`]).sort((a, b) => a[0].localeCompare(b[0]));
   const imoveis = unicos((l) => [`${l.cpf}|${l.codImovel}`, `${prefixo(l)}${nomeImovel(v, l.cpf, l.codImovel)}`]);
   const contas = unicos((l) => [`${l.cpf}|${l.codConta}`, `${prefixo(l)}${nomeConta(v, l.cpf, l.codConta)}`]);
   const tiposDoc = unicos((l) => [l.tipoDoc, TIPO_DOC[l.tipoDoc] ?? l.tipoDoc]);
@@ -67,7 +67,10 @@ export function abaDetalhamento(raiz: HTMLElement, v: Visao): void {
         <label class="busca">Buscar<input type="search" data-filtro="busca" placeholder="Ex.: diesel, 5012, 12.345.678" /></label>
       </div>
       <div class="barra-detalhe">
-        <p class="contagem" role="status" aria-live="polite"></p>
+        <div>
+          <p class="contagem" role="status" aria-live="polite"></p>
+          <p class="saldos-mes" aria-live="polite"></p>
+        </div>
         <div class="acoes-detalhe">
           <button type="button" class="botao-sec" data-imprimir-filtro>${iconeImpressora}Imprimir (filtro atual)</button>
           <button type="button" class="botao-sec" data-exportar>${iconeDownload}Exportar CSV (filtro atual)</button>
@@ -95,6 +98,7 @@ export function abaDetalhamento(raiz: HTMLElement, v: Visao): void {
   const caixa = raiz.querySelector<HTMLDivElement>('.tabela-virtual')!;
   const corpo = raiz.querySelector<HTMLTableSectionElement>('tbody')!;
   const contagem = raiz.querySelector<HTMLParagraphElement>('.contagem')!;
+  const saldosMes = raiz.querySelector<HTMLParagraphElement>('.saldos-mes')!;
   const colunas = v.individual ? 9 : 10;
 
   const linhaHtml = (l: LancamentoVisao): string => {
@@ -130,6 +134,16 @@ export function abaDetalhamento(raiz: HTMLElement, v: Visao): void {
     const ent = visiveis.reduce((s, l) => s + l.entrada, 0);
     const sai = visiveis.reduce((s, l) => s + l.saida, 0);
     contagem.innerHTML = `<strong>${numeroBR(visiveis.length)}</strong> de ${numeroBR(v.lancamentos.length)} lançamentos · entradas <span class="num agro">${formatarReais(ent)}</span> · saídas <span class="num negativo">${formatarReais(sai)}</span>`;
+    // Com um mês escolhido: saldo do Livro Caixa no início e no fim do mês, por produtor (do arquivo).
+    const mes = filtro.mes || v.filtro.mes;
+    saldosMes.innerHTML = mes
+      ? v.arquivos.map((a) => {
+          const cpf = a.abertura?.cpf ?? '';
+          const ini = saldoInicialMes(v, cpf, mes);
+          const fim = v.arquivosPeriodo.find((x) => x.abertura?.cpf === cpf && x.anoBase === Number(mes.slice(0, 4)))?.lancamentos.filter((l) => l.data.iso.startsWith(mes)).at(-1)?.saldo ?? ini;
+          return `${v.individual ? '' : `${esc(a.abertura?.nome ?? '')}: `}saldo inicial do mês <span class="num">${ini === null ? '—' : formatarReais(ini)}</span> · saldo final <span class="num">${fim === null ? '—' : formatarReais(fim)}</span>`;
+        }).join('<br>')
+      : '';
     raiz.querySelectorAll<HTMLButtonElement>('button[data-ordem]').forEach((b) => {
       const ativo = b.dataset.ordem === campo;
       b.closest('th')!.setAttribute('aria-sort', ativo ? (crescente ? 'ascending' : 'descending') : 'none');
@@ -172,7 +186,7 @@ export function abaDetalhamento(raiz: HTMLElement, v: Visao): void {
       if (s.value) descritos.push(`${s.closest('label')?.firstChild?.textContent?.trim() ?? ''}: ${s.selectedOptions[0]?.textContent ?? s.value}`);
     });
     if (filtro.busca) descritos.push(`Busca: "${filtro.busca}"`);
-    imprimirDetalhamento(v, visiveis, descritos);
+    imprimirDetalhamento(v, visiveis, descritos, filtro.mes || v.filtro.mes);
   });
 
   raiz.querySelector<HTMLButtonElement>('[data-exportar]')!.addEventListener('click', () => {
