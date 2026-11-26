@@ -12,9 +12,11 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "sigilo": "node scripts/verificar-sigilo.mjs",
-    "verificar": "npm run sigilo && npm run typecheck && npm test && npm run build"
+    "verificar": "npm run sigilo && npm run typecheck && npm test && npm run build",
+    "fixtures": "node scripts/gerar-fixtures.ts"
   },
   "devDependencies": {
+    "@types/node": "^22.20.7",
     "typescript": "^5.9.3",
     "vite": "^8.3.8",
     "vitest": "^5.1.2"
