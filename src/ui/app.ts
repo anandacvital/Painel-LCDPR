@@ -21,7 +21,9 @@ import {
   preferenciaManterDados,
   removerAnalise,
   salvarAnalise,
+  carregarAjustes,
   carregarCenarios,
+  salvarAjustes,
   salvarCenarios,
 } from './armazenamento';
 import { esc, numeroBR } from './html';
@@ -64,6 +66,10 @@ export function iniciarApp(raiz: HTMLElement): void {
   estado.painel.plano.cenariosGuardados = () => estado.manterDados;
   estado.painel.plano.aoMudarCenarios = (lista) => {
     if (estado.manterDados) void salvarCenarios(lista);
+  };
+  // Reclassificação de naturezas de despesa: mesma regra (só com "Manter" ligado).
+  estado.painel.aoMudarAjustes = (ajustes) => {
+    if (estado.manterDados) void salvarAjustes(ajustes);
   };
 
   raiz.innerHTML = `
@@ -239,6 +245,7 @@ export function iniciarApp(raiz: HTMLElement): void {
     if (manter.checked) {
       for (const [chave, r] of estado.analises) await salvarAnalise(chave, r);
       await salvarCenarios(estado.painel.plano.cenarios);
+      await salvarAjustes(estado.painel.ajustes);
       status.textContent = 'As análises serão mantidas neste navegador até você apagá-las.';
     } else {
       await apagarTudo();
@@ -250,6 +257,7 @@ export function iniciarApp(raiz: HTMLElement): void {
     await apagarTudo();
     estado.analises.clear();
     estado.painel.plano.cenarios = [];
+    estado.painel.ajustes = {};
     estado.selecionada = null;
     estado.manterDados = false;
     manter.checked = false;
@@ -261,6 +269,9 @@ export function iniciarApp(raiz: HTMLElement): void {
   if (estado.manterDados) {
     void carregarCenarios().then((cenarios) => {
       if (cenarios.length) estado.painel.plano.cenarios = cenarios;
+    });
+    void carregarAjustes().then((ajustes) => {
+      estado.painel.ajustes = { ...ajustes, ...estado.painel.ajustes };
     });
     void carregarAnalises().then((salvas) => {
       for (const r of salvas) estado.analises.set(chaveDe(r), r);

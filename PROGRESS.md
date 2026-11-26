@@ -87,14 +87,25 @@ _Última atualização: 26/11/2026 (Fase 2)_
 - Guardados no IndexedDB (loja `cenarios`, banco versão 2) SÓ com "Manter as análises" ligado;
   "Apagar dados" apaga junto. Cálculos em `domain/cenarios.ts`. 126 testes.
 
+### Painel interativo (branch `fase-6-painel-interativo`)
+- Período: ano civil, safra (mês de início escolhido, padrão julho) ou meses livres; IRPF sempre no ano civil.
+- Filtro cruzado por clique (mês, imóvel, cliente/fornecedor, natureza) com faixa "Filtrando" e "Limpar filtros".
+- Indicadores de gestão na Visão Executiva: capital de giro, concentração de compradores (HHI) e despesas
+  por natureza (inferida, com tela para ajustar; ajustes no IndexedDB v3 só com "Manter").
+- Alertas acionáveis no topo (capital de giro, comprador dominante, imóvel negativo, natureza que mais
+  cresceu, queda de margem, comprovação fraca, limite do LCDPR, janela de planejamento).
+- Relatórios coloridos; nomes de cada produtor no cabeçalho; impressão unificada ou separada por produtor;
+  Livro Caixa de um mês com saldo inicial e final (também no Detalhamento).
+- Corrigido: cascata do Fluxo de Caixa não desenhava os meses com caixa acumulado negativo. 146 testes.
+
 ## Em andamento
-- PR dos cenários.
+- PR do painel interativo.
 
 ## Pendências / dúvidas para a Ananda
 - Cópia do TXT real ainda na biblioteca de arquivos do projeto (aguardando "pode apagar").
 - Lei nº 9.250/1995, art. 18: texto não conferido (fonte indisponível).
 
 ## Próximos passos
-- Ouvir a Ananda sobre a aba de Planejamento IRPF.
+- Área e produção (R$/ha, R$/saca): virão do sistema Vértice no futuro.
 - Cadastrar a tabela progressiva de cada novo ano em `TABELAS_ANUAIS` (`domain/irpf.ts`).
 - Tributação mínima de altas rendas (Lei 15.270/2025) não é calculada: só alertada.

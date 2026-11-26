@@ -134,6 +134,25 @@ LCDPR, perguntas 47 e 52; Lei nº 8.023/1990, art. 13). Por isso o critério pad
 - Projeção: sazonal pelo ano anterior quando houver; senão média mensal. Simulação sempre
   mostra os cuidados (pagamento até 31/12, substância econômica).
 
+## 8.2 Painel interativo (`domain/periodo.ts`, `domain/gestao.ts`, `domain/naturezas.ts`)
+- Período: ano civil (padrão), safra (12 meses a partir do mês escolhido; padrão julho; abre na safra
+  completa mais recente) ou meses livres (até 24). Safra/livre juntam os arquivos dos anos que tocam;
+  são cortados no último mês carregado, com aviso. IRPF e Planejamento IRPF são SEMPRE do ano civil.
+- Filtro cruzado: mês, imóvel (`cpf|código`), participante e natureza. Cada gráfico ignora o filtro da
+  própria dimensão e destaca o item escolhido; clicar de novo tira o filtro. Comparativo e Planejamento
+  ignoram período e filtro (com nota na tela). Relatórios saem com o filtro e o citam no cabeçalho.
+- Natureza das despesas é INFERIDA (ajuste da pessoa > folha de pagamento > palavras do histórico >
+  natureza mais comum do participante). Visão gerencial: não muda resultado nem IRPF. Ajustes guardados
+  no IndexedDB (loja `ajustes`, banco v3) só com "Manter" ligado.
+- Capital de giro = pior ponto do caixa acumulado da atividade a partir de zero no início do período
+  (sem saldo anterior nem financiamentos). Concentração de compradores pelo HHI (< 1.500 baixa; > 2.500 alta).
+- Alertas: calculados sobre o período inteiro, sem o filtro; cada um com ação (filtrar ou abrir aba).
+- Livro Caixa de um mês: saldo inicial = SLD_FIN do último Q100 anterior ao mês, no mesmo ano (zero em janeiro).
+- Relatórios coloridos (verde receita, vermelho despesa) com `print-color-adjust: exact`; legíveis em P&B
+  (entradas e saídas em colunas separadas, sinal "-" nos negativos). Com vários produtores: "unificado"
+  (um relatório, produtor em cada linha, nomes no cabeçalho) ou "separado" (um por produtor, nova página).
+- Área (ha) e produção (sacas) ficam para o futuro, integradas ao sistema Vértice (Ananda, 26/11/2026).
+
 ## 9. Decisões registradas
 - 25/11/2026: valores em centavos inteiros; CSP sem conexão de rede no build;
   verificação de sigilo no CI; ECharts adiado para a Fase 3.
@@ -160,3 +179,5 @@ LCDPR, perguntas 47 e 52; Lei nº 8.023/1990, art. 13). Por isso o critério pad
 - 26/11/2026: cenários do simulador guardados no IndexedDB (loja `cenarios`, banco v2) só com "Manter" ligado.
   Economia separada em definitiva (despesa a mais) e adiada (receita empurrada para janeiro: o imposto volta
   no ano seguinte); o "melhor cenário" é o de maior economia DEFINITIVA.
+- 26/11/2026: Painel interativo sem aba nova (pedido da Ananda): filtro cruzado, safra e período livre,
+  indicadores de gestão, alertas no topo, relatórios coloridos, Livro Caixa de um mês e unificado/separado.

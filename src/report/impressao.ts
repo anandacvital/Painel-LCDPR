@@ -30,7 +30,10 @@ import type { ResultadoAnalise, Severidade } from '../parser/modelo';
 import { COR, desenharGrafico, eixoMeses, eixoValor, liberarGraficos, reaisCompacto } from '../ui/graficos/echarts';
 import { esc, numeroBR } from '../ui/html';
 import { DESCRICAO_CRITERIO } from '../domain/consolidacao';
-import { avisoPrevia, nomeImovel, TEXTO_OPCAO, textoComparacao, type Visao } from '../ui/painel/contexto';
+import { avisoPrevia, filtrosDescritos, nomeImovel, TEXTO_OPCAO, textoComparacao, type Visao } from '../ui/painel/contexto';
+import { capitalDeGiro, concentracaoCompradores, despesasPorNatureza } from '../domain/gestao';
+import { NOMES_CURTOS_NATUREZA } from '../domain/naturezas';
+import { rotulosEixo } from '../domain/periodo';
 import { agruparPorRegra, conclusaoSaude, ROTULO } from '../ui/saudeArquivo';
 
 const pct = (f: number | null): string => (f === null ? '—' : `${(f * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`);
@@ -130,6 +133,30 @@ export function htmlRelatorioValidador(r: ResultadoAnalise): string {
 // ===========================================================================
 // RELATÓRIO EXECUTIVO (PAINEL DO LIVRO CAIXA)
 // ===========================================================================
+
+/**
+ * Identificação comum dos relatórios do Painel: o NOME de cada produtor (não só
+ * "Todos os produtores"), CPFs, período, filtros e critério de consolidação.
+ */
+export function camposVisao(v: Visao, extra: [string, string][] = []): [string, string][] {
+  const nomes = v.arquivos.map((x) => x.abertura?.nome ?? x.nomeArquivo);
+  const cpfs = [...new Set(v.arquivos.map((x) => x.abertura?.cpf).filter((c): c is string => !!c))];
+  const filtros = filtrosDescritos(v);
+  const periodo = v.periodo.tipo === 'ano'
+    ? `Ano civil ${v.ano}${v.previa ? ` (prévia até ${v.previa.fim.split('-').reverse().join('/')})` : ''}`
+    : v.rotuloPeriodo;
+  return [
+    [nomes.length > 1 ? `Produtores (${nomes.length})` : 'Produtor', nomes.length > 1 ? nomes.join(' · ') : v.rotulo],
+    [cpfs.length > 1 ? 'CPFs' : 'CPF', cpfs.map(formatarCpfCnpj).join(', ') || '—'],
+    ['Período', periodo],
+    ...(v.consolidacao && v.arquivos.length > 1 ? [['Consolidação', DESCRICAO_CRITERIO[v.consolidacao.criterio]] as [string, string]] : []),
+    ...(filtros.length ? [['Filtros aplicados', filtros.join(' · ')] as [string, string]] : []),
+    ...extra,
+  ];
+}
+
+/** Mês por extenso; com o ano quando o período passa de um ano civil. */
+const mesRel = (v: Visao, chave: string): string => (v.periodo.tipo === 'ano' ? nomeMes(chave) : `${nomeMes(chave)}/${chave.slice(0, 4)}`);
 function linhaVariacao(atual: number, anterior: number | undefined, maiorEhMelhor = true, vs = 'ano anterior'): string {
   const v = variacao(atual, anterior);
   if (v === null) return '';
@@ -137,12 +164,14 @@ function linhaVariacao(atual: number, anterior: number | undefined, maiorEhMelho
   return `<small class="${bom ? 'rel-boa' : 'rel-ruim'}">${v >= 0 ? '▲' : '▼'} ${pct(Math.abs(v))} vs. ${esc(vs)}</small>`;
 }
 
-export function htmlRelatorioExecutivo(v: Visao): string {
+export function htmlRelatorioExecutivo(v: Visao, prefixo = 'rel'): string {
   const t = v.totais;
   const a = v.anterior?.totais;
-  const imposto = v.irpf.atual.imposto;
+  const irpf = v.irpf?.atual ?? null;
   const destaques = destaquesExecutivos(t, v.meses, a, textoComparacao(v));
-  const cpfs = [...new Set(v.arquivos.map((x) => x.abertura?.cpf).filter((c): c is string => !!c))];
+  const cg = capitalDeGiro(v.meses);
+  const conc = concentracaoCompradores(v.lancamentos);
+  const naturezas = despesasPorNatureza(v.lancamentos);
 
   const participantes = agruparPor(v.lancamentos, (l) => l.idPartic);
   const clientes = participantes.filter((g) => g.receitas > 0).sort((x, y) => y.receitas - x.receitas).slice(0, 5);
@@ -152,7 +181,7 @@ export function htmlRelatorioExecutivo(v: Visao): string {
     const cad = v.arquivos.find((x) => x.abertura?.cpf === cpf)?.imoveis.find((i) => i.codigo === cod);
     return { ...g, nome: nomeImovel(v, cpf, cod), exploracao: cad ? (TIPO_EXPLORACAO[cad.tipoExploracao] ?? '—') : '—', participacao: cad?.participacao ?? null };
   }).sort((x, y) => y.resultado - x.resultado);
-  const avisos = v.consolidacao?.avisos ?? [];
+  const avisos = [...v.avisosConsolidacao, ...v.avisosPeriodo];
   const vs = textoComparacao(v);
 
   const tabelaTop = (titulo: string, lista: typeof clientes, campo: 'receitas' | 'despesas', total: number) => `
@@ -165,12 +194,7 @@ export function htmlRelatorioExecutivo(v: Visao): string {
     </div>`;
 
   return `
-    ${cabecalho('Relatório Executivo do Livro Caixa', [
-      ['Produtor', v.rotulo],
-      [cpfs.length > 1 ? 'CPFs' : 'CPF', cpfs.map(formatarCpfCnpj).join(', ') || '—'],
-      ['Ano-base', v.previa ? `${v.ano} (prévia até ${v.previa.fim.split('-').reverse().join('/')})` : String(v.ano)],
-      ...(v.consolidacao && v.arquivos.length > 1 ? [['Consolidação', DESCRICAO_CRITERIO[v.consolidacao.criterio]] as [string, string]] : []),
-    ])}
+    ${cabecalho('Relatório Executivo do Livro Caixa', camposVisao(v))}
 
     ${v.previa ? `<div class="rel-avisos rel-bloco"><strong>Prévia do ano em andamento.</strong> ${esc(avisoPrevia(v))}</div>` : ''}
     <section class="rel-bloco">
@@ -179,35 +203,53 @@ export function htmlRelatorioExecutivo(v: Visao): string {
         <div class="rel-kpi rel-kpi-despesa"><span>Despesas</span><strong>${formatarReais(t.despesas)}</strong>${linhaVariacao(t.despesas, a?.despesas, false, vs)}</div>
         <div class="rel-kpi ${t.resultado < 0 ? 'rel-kpi-despesa' : 'rel-kpi-receita'}"><span>Resultado</span><strong>${formatarReais(t.resultado)}</strong>${linhaVariacao(t.resultado, a?.resultado, true, vs)}</div>
         <div class="rel-kpi"><span>Margem</span><strong>${pct(t.margem)}</strong></div>
-        <div class="rel-kpi"><span>IRPF estimado</span><strong>${formatarReais(imposto)}</strong><small>${TEXTO_OPCAO[v.irpf.atual.opcao]}</small></div>
+        ${irpf
+          ? `<div class="rel-kpi rel-kpi-irpf"><span>IRPF estimado</span><strong>${formatarReais(irpf.imposto)}</strong><small>${TEXTO_OPCAO[irpf.opcao]}${filtrosDescritos(v).length ? '; ano todo, sem o filtro' : ''}</small></div>`
+          : '<div class="rel-kpi rel-kpi-irpf"><span>IRPF estimado</span><strong>—</strong><small>só no ano civil (o IRPF é anual)</small></div>'}
       </div>
-      <p class="rel-nota">${esc(AVISO_ESTIMATIVA)}</p>
+      ${irpf ? `<p class="rel-nota">${esc(AVISO_ESTIMATIVA)}</p>` : ''}
       ${avisos.length ? `<div class="rel-avisos"><strong>Atenção na consolidação:</strong><ul>${avisos.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></div>` : ''}
     </section>
 
     <section class="rel-bloco">
-      <h2>Destaques do ano</h2>
+      <h2>Destaques ${esc(v.termos.do)}</h2>
       <ol class="rel-destaques">${destaques.map((d) => `<li>${esc(d)}</li>`).join('')}</ol>
     </section>
 
     <section class="rel-bloco rel-sem-quebra">
-      <h2>${esc(tituloReceitasDespesas(v.meses))}</h2>
-      <p class="rel-legenda">Barras: receitas (verde) e despesas (vermelho) do mês. Linha: resultado acumulado no ano.</p>
-      <div class="rel-grafico" id="rel-g-mensal" data-grafico style="height:260px"></div>
+      <h2>Indicadores de gestão</h2>
+      <div class="rel-kpis rel-kpis-gestao">
+        <div class="rel-kpi ${cg.necessidade > 0 ? 'rel-kpi-despesa' : 'rel-kpi-receita'}"><span>Necessidade de capital de giro</span><strong>${formatarReais(cg.necessidade)}</strong><small>${cg.mesPior ? `pior ponto em ${esc(mesRel(v, cg.mesPior))}${cg.recuperacao ? `; positivo de novo em ${esc(mesRel(v, cg.recuperacao))}` : ''}` : 'caixa da atividade positivo em todos os meses'}</small></div>
+        <div class="rel-kpi ${conc.nivel === 'alta' ? 'rel-kpi-despesa' : ''}"><span>Maior comprador</span><strong>${conc.maior ? pct(conc.maior.parte) : '—'}</strong><small>${conc.maior ? `da receita (${esc(formatarCpfCnpj(conc.maior.id))}); 3 maiores: ${pct(conc.top3)}; concentração ${conc.nivel}` : 'sem receitas'}</small></div>
+      </div>
+      <p class="rel-nota">Capital de giro: pior ponto do caixa acumulado da atividade a partir de zero no início do período (sem saldo anterior nem financiamentos). Concentração pelo índice HHI (até 1.500 baixa; acima de 2.500 alta).</p>
+      ${naturezas.length ? `
+      <h3>Despesas por natureza (classificação inferida pelo painel)</h3>
+      <table class="rel-tabela rel-compacta rel-naturezas">
+        <thead><tr><th>Natureza</th><th class="num">Valor</th><th class="num">% das despesas</th><th class="rel-col-barra"></th></tr></thead>
+        <tbody>${naturezas.map((n) => `<tr><td>${esc(NOMES_CURTOS_NATUREZA[n.natureza])}</td><td class="num">${formatarReais(n.valor)}</td><td class="num">${pct(n.parte)}</td><td class="rel-col-barra"><span class="rel-barra" style="width:${Math.round(n.parte * 100)}%"></span></td></tr>`).join('')}</tbody>
+      </table>
+      <p class="rel-nota">Natureza deduzida do histórico, do tipo de documento e do participante (o LCDPR não tem esse campo). Visão gerencial: não altera receita, despesa, resultado nem IRPF.</p>` : ''}
+    </section>
+
+    <section class="rel-bloco rel-sem-quebra">
+      <h2>${esc(tituloReceitasDespesas(v.meses, v.termos))}</h2>
+      <p class="rel-legenda">Barras: receitas (verde) e despesas (vermelho) do mês. Linha: resultado acumulado ${esc(v.termos.no)}.</p>
+      <div class="rel-grafico" id="${prefixo}-g-mensal" data-grafico style="height:260px"></div>
     </section>
 
     <section class="rel-bloco rel-sem-quebra">
       <h2>Mês a mês</h2>
       <table class="rel-tabela rel-compacta">
         <thead><tr><th>Mês</th><th class="num">Receitas</th><th class="num">Despesas</th><th class="num">Resultado</th><th class="num">Acumulado</th></tr></thead>
-        <tbody>${v.meses.map((m) => `<tr><td>${nomeMes(m.mes)}</td><td class="num">${formatarReais(m.receitas)}</td><td class="num">${formatarReais(m.despesas)}</td><td class="num ${m.resultado < 0 ? 'rel-neg' : ''}">${formatarReais(m.resultado)}</td><td class="num ${m.acumulado < 0 ? 'rel-neg' : ''}">${formatarReais(m.acumulado)}</td></tr>`).join('')}</tbody>
-        <tfoot><tr><th>Total</th><th class="num">${formatarReais(t.receitas)}</th><th class="num">${formatarReais(t.despesas)}</th><th class="num">${formatarReais(t.resultado)}</th><th></th></tr></tfoot>
+        <tbody>${v.meses.map((m) => `<tr><td>${esc(mesRel(v, m.mes))}</td><td class="num rel-pos">${formatarReais(m.receitas)}</td><td class="num rel-neg">${formatarReais(m.despesas)}</td><td class="num ${m.resultado < 0 ? 'rel-neg' : ''}">${formatarReais(m.resultado)}</td><td class="num ${m.acumulado < 0 ? 'rel-neg' : ''}">${formatarReais(m.acumulado)}</td></tr>`).join('')}</tbody>
+        <tfoot><tr><th>Total</th><th class="num rel-pos">${formatarReais(t.receitas)}</th><th class="num rel-neg">${formatarReais(t.despesas)}</th><th class="num">${formatarReais(t.resultado)}</th><th></th></tr></tfoot>
       </table>
     </section>
 
     <section class="rel-bloco rel-sem-quebra">
       <h2>${esc(tituloImoveis(imoveis))}</h2>
-      <div class="rel-grafico" id="rel-g-imoveis" data-grafico style="height:${Math.max(140, imoveis.length * 36 + 50)}px"></div>
+      <div class="rel-grafico" id="${prefixo}-g-imoveis" data-grafico style="height:${Math.max(140, imoveis.length * 36 + 50)}px"></div>
       <table class="rel-tabela rel-compacta">
         <thead><tr><th>Imóvel</th><th>Exploração</th><th class="num">Part.</th><th class="num">Receitas</th><th class="num">Despesas</th><th class="num">Resultado</th></tr></thead>
         <tbody>${imoveis.map((i) => `<tr><td>${esc(i.nome)}</td><td>${esc(i.exploracao)}</td><td class="num">${i.participacao !== null ? pct(i.participacao / 10000) : '—'}</td><td class="num">${formatarReais(i.receitas)}</td><td class="num">${formatarReais(i.despesas)}</td><td class="num ${i.resultado < 0 ? 'rel-neg' : ''}">${formatarReais(i.resultado)}</td></tr>`).join('')}</tbody>
@@ -225,14 +267,14 @@ export function htmlRelatorioExecutivo(v: Visao): string {
 }
 
 /** Desenha os gráficos do relatório executivo (depois que o HTML está na página). */
-function desenharGraficosExecutivo(raiz: HTMLElement, v: Visao): void {
+function desenharGraficosExecutivo(raiz: HTMLElement, v: Visao, prefixo = 'rel'): void {
   const semAnimacao = { animation: false };
-  const mensal = raiz.querySelector<HTMLElement>('#rel-g-mensal');
+  const mensal = raiz.querySelector<HTMLElement>(`#${prefixo}-g-mensal`);
   if (mensal) {
     desenharGrafico(mensal, {
       ...semAnimacao,
       grid: { left: 8, right: 12, top: 10, bottom: 30, containLabel: true },
-      xAxis: eixoMeses(),
+      xAxis: eixoMeses(rotulosEixo(v.meses.map((m) => m.mes))),
       yAxis: eixoValor(),
       series: [
         { name: 'Receitas', type: 'bar', data: v.meses.map((m) => m.receitas), itemStyle: { color: COR.receita } },
@@ -241,7 +283,7 @@ function desenharGraficosExecutivo(raiz: HTMLElement, v: Visao): void {
       ],
     });
   }
-  const imoveisEl = raiz.querySelector<HTMLElement>('#rel-g-imoveis');
+  const imoveisEl = raiz.querySelector<HTMLElement>(`#${prefixo}-g-imoveis`);
   if (imoveisEl) {
     const grupos = agruparPor(v.lancamentos, (l) => `${l.cpf}|${l.codImovel}`)
       .map((g) => { const [cpf, cod] = g.chave.split('|') as [string, string]; return { nome: nomeImovel(v, cpf, cod), resultado: g.resultado }; })
@@ -300,6 +342,19 @@ export function imprimirValidador(r: ResultadoAnalise): void {
   imprimir(htmlRelatorioValidador(r), `validador-lcdpr-${r.arquivo.anoBase ?? ''}-${slug(r.arquivo.abertura?.nome ?? r.arquivo.nomeArquivo)}`);
 }
 
-export function imprimirExecutivo(v: Visao): void {
-  imprimir(htmlRelatorioExecutivo(v), `relatorio-executivo-lcdpr-${v.ano}-${slug(v.rotulo)}`, (area) => desenharGraficosExecutivo(area, v));
+/** Nome do arquivo PDF sugerido: período e produtor (ou "por-produtor" no modo separado). */
+export function nomeDocumento(base: string, visoes: readonly Visao[]): string {
+  const v = visoes[0]!;
+  const periodo = v.periodo.tipo === 'ano' ? String(v.ano) : slug(v.rotuloPeriodo);
+  return `${base}-${periodo}-${visoes.length > 1 ? 'por-produtor' : slug(v.rotulo)}`;
+}
+
+/**
+ * Uma Visão = relatório unificado. Várias = "separado": um relatório por
+ * produtor, cada um começando em página nova.
+ */
+export function imprimirExecutivo(visoes: Visao | readonly Visao[]): void {
+  const lista = Array.isArray(visoes) ? visoes : [visoes as Visao];
+  const html = lista.map((v, i) => `<div class="${i > 0 ? 'rel-nova-pagina' : ''}">${htmlRelatorioExecutivo(v, `rel${i}`)}</div>`).join('');
+  imprimir(html, nomeDocumento('relatorio-executivo-lcdpr', lista), (area) => lista.forEach((v, i) => desenharGraficosExecutivo(area, v, `rel${i}`)));
 }

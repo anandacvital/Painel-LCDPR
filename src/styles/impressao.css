@@ -316,3 +316,86 @@
   display: block;
   font-size: 6.5pt;
 }
+
+/* ===================================================================
+ * RELATÓRIOS COLORIDOS (pedido da Ananda, 26/11/2026)
+ * Mesmas cores da tela: verde = receitas/entradas, vermelho = despesas/saídas.
+ * Continuam legíveis em preto e branco: entradas e saídas ficam em colunas
+ * separadas, negativos têm sinal "-", e os fundos são claros (viram cinza claro).
+ * =================================================================== */
+.relatorio {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+.rel-cabecalho {
+  padding: 8pt 10pt;
+  border-bottom-width: 3pt;
+  border-radius: 4pt 4pt 0 0;
+  background: var(--gp-fundo);
+}
+.rel-bloco h2 {
+  padding-left: 6pt;
+  border-left: 3pt solid var(--gp-azul-2);
+}
+.rel-tabela thead th {
+  background: var(--gp-fundo);
+  color: var(--gp-navy);
+}
+.rel-tabela tbody tr:nth-child(even) td {
+  background: #f6f9fd;
+}
+.rel-tabela tfoot th {
+  background: var(--gp-fundo);
+  color: var(--gp-navy);
+}
+.rel-pos {
+  color: var(--gp-agro);
+}
+.rel-kpi-receita {
+  background: var(--gp-agro-fundo);
+}
+.rel-kpi-receita strong {
+  color: var(--gp-agro);
+}
+.rel-kpi-despesa,
+.rel-kpi-erro {
+  background: var(--gp-alerta-fundo);
+}
+.rel-kpi-despesa strong,
+.rel-kpi-erro strong {
+  color: var(--gp-alerta);
+}
+.rel-kpi-alerta {
+  background: var(--gp-atencao-fundo);
+}
+.rel-kpi-irpf,
+.rel-kpi-info {
+  background: var(--gp-fundo);
+}
+.rel-destaques li::marker {
+  color: var(--gp-azul-2);
+  font-weight: 700;
+}
+.rel-kpis-gestao {
+  grid-template-columns: 1fr 1fr;
+}
+.rel-kpis-gestao .rel-kpi strong {
+  font-size: 13pt;
+}
+.rel-col-barra {
+  width: 30%;
+}
+.rel-barra {
+  display: block;
+  height: 7pt;
+  border-radius: 2pt;
+  background: var(--gp-alerta);
+}
+.rel-saldos-mes td,
+.rel-saldos-mes th {
+  font-size: 9pt;
+}
+/* Relatório "separado": cada produtor começa em página nova. */
+.rel-nova-pagina {
+  break-before: page;
+}
