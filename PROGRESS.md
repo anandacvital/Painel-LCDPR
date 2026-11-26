@@ -1,6 +1,6 @@
 # PROGRESS.md — andamento do Painel LCDPR
 
-_Última atualização: 26/11/2026_
+_Última atualização: 26/11/2026 (Fase 2)_
 
 ## Feito
 ### Fase 0 — Fundação (PR #1, já na `main`)
@@ -19,16 +19,22 @@ _Última atualização: 26/11/2026_
   "Apagar dados deste computador".
 - 52 testes passando.
 
+### Fase 2 — Cálculos (branch `fase-2-dominio`)
+- Agregações: totais, por mês (12 meses, acumulado), por imóvel, conta, tipo de documento e participante.
+- Consolidação de produtores com diagnóstico parcela x operação inteira e 3 critérios.
+- IRPF: resultado real x 20% da receita bruta, prejuízo compensável, estimativa a 27,5%, insights com base legal.
+- Projeção até dezembro (sazonal ou média) e simulação antecipar/postergar.
+- 69 testes passando.
+
 ## Em andamento
-- PR da Fase 1 aguardando revisão e validação com arquivo real (no computador da Ananda).
+- PR da Fase 2 aguardando revisão.
 
 ## Pendências / dúvidas para a Ananda
-- Confirmar com arquivo real: QTD_LIN inclui o 9999? Lançamentos TIPO_LANC 3 movimentam o saldo?
-  (O painel aponta como alerta se o arquivo tratar diferente.)
 - Cópia do TXT real ainda na biblioteca de arquivos do projeto (aguardando "pode apagar").
+- Lei nº 9.250/1995, art. 18: texto não conferido (fonte indisponível).
 
-## Próximos passos (Fase 2 — Domínio, branch `fase-2-dominio`)
-1. Agregações mensais, por natureza, por imóvel e por participante.
-2. Consolidação de produtores com regra para condôminos (0045) e escolha do critério.
-3. Regras de IRPF: resultado real x 20% da receita bruta, prejuízo a compensar.
-4. Testes dos cálculos.
+## Próximos passos (Fase 3 — Painel do Livro Caixa, branch `fase-3-painel`)
+1. Separar a aplicação em dois módulos: Validador | Painel do Livro Caixa.
+2. ECharts com a paleta Grupo Paraná; títulos que dizem a conclusão.
+3. Abas: Visão Executiva, Fluxo de Caixa, Receitas & Despesas, Imóveis, Comparativo, Detalhamento.
+4. Cabeçalho com seletor de produtor (consolidado/individual), ano e saúde do arquivo.
