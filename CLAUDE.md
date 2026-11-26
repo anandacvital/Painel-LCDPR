@@ -90,11 +90,11 @@ https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/declaraco
 - 0045 obrigatório quando 0040.PARTICIPACAO < 100% ou TIPO_EXPLORACAO ≠ 1.
 - Saldo: começa em zero no ano; cada Q100 traz o saldo após o lançamento; Q200 traz saldo acumulado.
 
-### Pontos que o Manual NÃO define (premissas adotadas — validar com arquivo real)
-- **QTD_LIN do 9999**: assumimos que conta todas as linhas, inclusive o próprio 9999 (padrão SPED).
-- **TIPO_LANC 3** (adiantamento recebido em ano anterior): o Manual não diz se movimenta o saldo.
-  O painel calcula o saldo com a entrada; se o arquivo não a considerar, aponta ALERTA específico
-  (não erro) na linha. Confirmar com o sistema gerador (Domínio/Protheus).
+### Pontos que o Manual NÃO define (resolvidos pelo Perguntas e Respostas do LCDPR)
+- **QTD_LIN do 9999**: conta todas as linhas, inclusive o próprio 9999 (exemplo da pergunta 12).
+- **TIPO_LANC 3**: lançado no ano em que a receita é reconhecida (entrega), com a data do
+  adiantamento no histórico (pergunta 31). O painel soma a entrada ao saldo; se o arquivo não
+  somar, aponta ALERTA específico (não erro) na linha.
 - Exemplos do Manual mostram espaços antes de valores no Q200; o painel aceita com alerta.
 
 ### Critérios de risco (do painel, não da Receita; nunca são "erro")
@@ -104,10 +104,28 @@ https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/declaraco
   concentração (> 50% das receitas ou despesas em um participante), duplicidade
   (mesma data, valor e documento).
 
-## 8. Consolidação de produtores (decisão pendente — Fase 2)
-Condôminos (0045) podem ter arquivos com a operação inteira ou só a parcela.
-O painel deve avisar o risco de duplicidade e deixar o usuário escolher o critério.
-Documentar aqui a regra adotada.
+## 8. Consolidação de produtores (`src/domain/consolidacao.ts`)
+Regra da Receita: cada condômino/parceiro escritura SÓ A SUA PARCELA (Perguntas e Respostas
+LCDPR, perguntas 47 e 52; Lei nº 8.023/1990, art. 13). Por isso o critério padrão é **somar**.
+- Arquivos vinculados (mesmo ano): um produtor é terceiro (0045) no arquivo do outro, ou ambos
+  cadastram o mesmo NIRF. Lançamentos espelhados: mesma data, documento, participante e tipo.
+- Diagnóstico pelos percentuais do 0040: valores iguais com percentuais diferentes =
+  operação inteira (risco de duplicidade); valores na proporção = parcela; 50/50 = indeterminado.
+- Critérios que o usuário escolhe: `somar` (padrão), `proporcional` (aplica % do 0040 aos
+  imóveis com participação < 100%), `sem-duplicar` (operação idêntica entre condôminos conta 1 vez).
+- Sempre exibir os avisos de duplicidade/subestimação gerados pela consolidação.
+
+## 8.1 Regras de cálculo e IRPF (`src/domain/agregacoes.ts`, `src/domain/irpf.ts`)
+- Receita bruta = VL_ENTRADA dos tipos 1 e 3 (saída nesses tipos = devolução, reduz).
+  Despesa = VL_SAIDA do tipo 2 (entrada no tipo 2 = estorno, reduz). Regime de caixa (Lei 8.023, art. 4º).
+- Tipo 3 é receita do ano da entrega (P&R LCDPR, pergunta 31) e entra no saldo.
+- QTD_LIN inclui o 9999 (exemplo da pergunta 12 do P&R LCDPR).
+- Opção 20% da receita bruta só para resultado positivo (art. 5º); optar faz perder TODO o
+  prejuízo anterior (art. 16, parágrafo único). Prejuízo de PF compensável sem limite de 30% (art. 14).
+- Imposto = ESTIMATIVA a 27,5% sobre a base; sempre exibir `AVISO_ESTIMATIVA`.
+- Lei nº 9.250/1995, art. 18 (citado no briefing) NÃO foi conferido no texto oficial: validar antes de citar.
+- Projeção: sazonal pelo ano anterior quando houver; senão média mensal. Simulação sempre
+  mostra os cuidados (pagamento até 31/12, substância econômica).
 
 ## 9. Decisões registradas
 - 25/11/2026: valores em centavos inteiros; CSP sem conexão de rede no build;
@@ -116,6 +134,9 @@ Documentar aqui a regra adotada.
   e apagado da máquina de trabalho; fixtures serão 100% sintéticas.
 - 26/11/2026: Fase 1 — persistência desligada por padrão; cor âmbar para o semáforo amarelo;
   premissas de QTD_LIN e TIPO_LANC 3 registradas na seção 7.
+- 26/11/2026: Ananda pediu DOIS MÓDULOS: Validador (pré-transmissão) e Painel do Livro Caixa
+  (visual, arquivos já transmitidos). Nova ordem: Fase 2 cálculos → Fase 3 Painel visual com
+  a separação Validador | Painel → Fase 4 Planejamento IRPF → Fase 5 PDF.
 - 26/11/2026: repositório público + GitHub Pages gratuito (sem orçamento para plano pago).
   Consequência: qualquer arquivo versionado fica público na hora; a verificação de
   sigilo e o .gitignore são a barreira e não podem ser afrouxados.
