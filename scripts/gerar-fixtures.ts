@@ -6,10 +6,15 @@
  * - lcdpr-sintetico-com-problemas-2025.txt: o mesmo arquivo com problemas
  *   injetados de propósito, para ver a aba Saúde do Arquivo funcionando.
  *
+ * - exemplo-lcdpr-2024.txt e exemplo-lcdpr-2025.txt: "LCDPR de exemplo" com
+ *   calendário agrícola realista e resultado positivo, para testar o painel.
+ *
  * Todos os dados são fictícios. Nunca use este script com arquivo real.
  */
 import { writeFileSync } from 'node:fs';
 import { gerarLcdpr, montarTexto } from '../tests/fixtures/gerador.ts';
+import { gerarExemplo } from '../tests/fixtures/gerador-exemplo.ts';
+import { EXEMPLOS } from './exemplos.ts';
 
 const pasta = new URL('../tests/fixtures/', import.meta.url);
 
@@ -33,3 +38,8 @@ trocar(linhas.length - 1, 6, '9'); // QTD_LIN errado
 writeFileSync(new URL('lcdpr-sintetico-com-problemas-2025.txt', pasta), montarTexto(linhas), 'latin1');
 
 console.log('Fixtures sintéticas geradas em tests/fixtures/.');
+
+// "LCDPR de exemplo" (calendário agrícola realista, resultado positivo), para testar o painel.
+for (const ex of EXEMPLOS) {
+  writeFileSync(new URL(ex.arquivo, pasta), gerarExemplo(ex.opcoes).texto, 'latin1');
+}
