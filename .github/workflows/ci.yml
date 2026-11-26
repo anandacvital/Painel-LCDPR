@@ -1,0 +1,29 @@
+# CI: a cada push e Pull Request, confere sigilo, tipos, testes e build.
+# Se qualquer passo falhar, o PR fica marcado em vermelho.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Verificação de sigilo (nenhum dado real versionado)
+        run: npm run sigilo
+      - name: Checagem de tipos (TypeScript)
+        run: npm run typecheck
+      - name: Testes (Vitest)
+        run: npm test
+      - name: Build de produção
+        run: npm run build

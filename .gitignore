@@ -1,0 +1,42 @@
+# =====================================================================
+# SEGURANÇA DE DADOS (inegociável)
+# Arquivos LCDPR reais, PDFs e qualquer dado de produtor NUNCA vão
+# para o repositório. Só arquivos sintéticos em tests/fixtures/.
+# =====================================================================
+*.txt
+*.TXT
+*.pdf
+*.PDF
+dados/
+.env
+.env.*
+
+# Exceção explícita: fixtures sintéticas geradas para os testes
+!tests/fixtures/
+!tests/fixtures/**
+# (o *.txt acima é reaplicado como exceção só dentro de fixtures)
+!tests/fixtures/**/*.txt
+!tests/fixtures/**/*.TXT
+
+# Planilhas e exportações locais também podem conter dados reais
+*.csv
+*.xlsx
+*.xls
+!tests/fixtures/**/*.csv
+
+# =====================================================================
+# Dependências e builds
+# =====================================================================
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+.vite/
+
+# Sistema operacional e editores
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.log

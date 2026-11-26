@@ -1,0 +1,115 @@
+@import './tokens.css';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--gp-fundo);
+  color: var(--gp-texto);
+  font-family: var(--fonte-texto);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Números sempre em fonte mono com dígitos alinhados (tabulares) */
+.num {
+  font-family: var(--fonte-numero);
+  font-variant-numeric: tabular-nums;
+}
+
+.cabecalho {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: var(--esp-3);
+  padding: var(--esp-3) var(--esp-4);
+  background: var(--gp-navy);
+  color: var(--gp-branco);
+}
+.cabecalho h1 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.cabecalho .marca {
+  opacity: 0.75;
+  font-weight: 400;
+}
+
+main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--esp-5) var(--esp-4);
+}
+
+.card {
+  background: var(--gp-branco);
+  border-radius: var(--raio);
+  box-shadow: var(--sombra);
+  padding: var(--esp-5) var(--esp-4);
+}
+
+.area-arquivo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--esp-1);
+  cursor: pointer;
+  border: 2px dashed var(--gp-azul-3);
+  border-radius: var(--raio);
+  background: var(--gp-creme);
+  padding: var(--esp-5) var(--esp-4);
+  text-align: center;
+  transition: background var(--transicao), border-color var(--transicao);
+}
+.area-arquivo:hover,
+.area-arquivo:focus-within,
+.area-arquivo.arrastando {
+  background: var(--gp-fundo);
+  border-color: var(--gp-azul-1);
+}
+.area-arquivo svg {
+  width: 48px;
+  height: 48px;
+  color: var(--gp-agro);
+}
+.area-arquivo p {
+  margin: var(--esp-2) 0 0;
+  color: var(--gp-texto-suave);
+}
+
+.aviso-sigilo {
+  display: flex;
+  gap: var(--esp-2);
+  align-items: flex-start;
+  margin-top: var(--esp-4);
+  font-size: 0.9rem;
+  color: var(--gp-texto-suave);
+}
+.aviso-sigilo svg {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  color: var(--gp-azul-1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+@media (max-width: 720px) {
+  main {
+    padding: var(--esp-4) var(--esp-3);
+  }
+}
