@@ -32,7 +32,8 @@ import { abaComparativo, abaFluxoCaixa, abaImoveis, abaReceitasDespesas, abaVisa
 import { detectarPrevia, montarVisao, rotuloFiltro, textoComparacao, TODOS, type Visao } from './contexto';
 import { dadosAlertas, type AcoesPainel } from './gestao';
 import { abaDetalhamento } from './detalhamento';
-import { abaPlanejamento, novoEstadoPlano, type EstadoPlano } from './planejamento';
+import { abaPlanejamento, montarFichas, novoEstadoPlano, type EstadoPlano } from './planejamento';
+import { imprimirDirpf } from '../../report/dirpf';
 
 export type AbaPainel = 'executiva' | 'fluxo' | 'receitas' | 'imoveis' | 'comparativo' | 'planejamento' | 'detalhamento';
 
@@ -240,7 +241,8 @@ export function montarPainel(raiz: HTMLElement, analises: readonly ResultadoAnal
             <button type="button" role="menuitem" data-razao="imovel"><strong>${TITULO_RAZAO.imovel}</strong><small>lançamentos e subtotal de cada imóvel</small></button>
             <button type="button" role="menuitem" data-razao="conta"><strong>${TITULO_RAZAO.conta}</strong><small>para conferir com o extrato</small></button>
             <button type="button" role="menuitem" data-razao="participante"><strong>${TITULO_RAZAO.participante}</strong><small>cada cliente e fornecedor, com % do total</small></button>
-            ${filtroAtivo(estado.filtro) ? '<p class="ajuda">Os relatórios saem com o filtro aplicado no Painel.</p>' : ''}
+            <button type="button" role="menuitem" data-imprimir="dirpf"><strong>Ficha Atividade Rural da DIRPF</strong><small>ano civil ${ano}, um produtor por página, sem filtro</small></button>
+            ${filtroAtivo(estado.filtro) ? '<p class="ajuda">Os relatórios saem com o filtro aplicado no Painel (exceto a ficha da DIRPF).</p>' : ''}
           </div>
         </details>` : ''}
     </section>
@@ -374,6 +376,11 @@ export function montarPainel(raiz: HTMLElement, analises: readonly ResultadoAnal
     raiz.querySelector<HTMLButtonElement>('[data-imprimir="executivo"]')?.addEventListener('click', () => {
       if (menu) menu.open = false;
       imprimirExecutivo(visoesParaImprimir());
+    });
+    // DIRPF: sempre o ano civil inteiro, por CPF (o IRPF é anual e de cada pessoa).
+    raiz.querySelector<HTMLButtonElement>('[data-imprimir="dirpf"]')?.addEventListener('click', () => {
+      if (menu) menu.open = false;
+      if (visaoAno) imprimirDirpf(montarFichas(analises, visaoAno, estado.plano));
     });
     raiz.querySelectorAll<HTMLButtonElement>('[data-razao]').forEach((b) => {
       b.addEventListener('click', () => {

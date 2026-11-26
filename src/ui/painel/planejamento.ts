@@ -1,13 +1,14 @@
 /**
  * ABA PLANEJAMENTO IRPF: o que fazer até 31/12 para pagar o imposto certo.
  *
- * Cinco blocos, um produtor (CPF) por vez, porque o IRPF é de cada pessoa
+ * Cinco blocos (mais a ficha da DIRPF), um produtor (CPF) por vez, porque o IRPF é de cada pessoa
  * (Lei nº 8.023/1990, art. 13):
  * 1. Real x 20% da receita bruta, lado a lado, com a melhor opção destacada.
  * 2. Projeção até dezembro, quando o arquivo é uma prévia do ano em andamento.
  * 3. Simulador "e se": antecipar despesas e postergar receitas, com o ponto de
  *    equilíbrio (a despesa a mais que faz o resultado real valer mais a pena).
  * 4. Prejuízo a compensar: saldo, uso no ano e sobra.
+ *    Junto, a ficha Atividade Rural da DIRPF (domain/dirpf.ts), recolhida.
  * 5. Checklist de cuidados, cada um com a base legal.
  *
  * Os cálculos ficam em domain/planejamento.ts (sem tela). Aqui só se desenha
@@ -20,6 +21,8 @@ import { CUIDADOS, LIMITE_OBRIGATORIEDADE_LCDPR, melhorImposto, planejarProdutor
 import type { ArquivoLcdpr, ResultadoAnalise } from '../../parser/modelo';
 import { compararCenarios, melhorCenario, novoId, proximoNome, type Cenario, type LinhaComparacao } from '../../domain/cenarios';
 import { imprimirPlanejamento } from '../../report/planejamento';
+import { montarFicha, type FichaDirpf } from '../../domain/dirpf';
+import { htmlFichaDirpf, imprimirDirpf } from '../../report/dirpf';
 import { esc } from '../html';
 import { iconeAlerta, iconeImpressora } from '../icones';
 import type { Visao } from './contexto';
@@ -70,6 +73,32 @@ export function montarPlanos(analises: readonly ResultadoAnalise[], v: Visao, e:
     });
     return p ? [p] : [];
   });
+}
+
+/**
+ * Fichas da DIRPF (Atividade Rural) de todos os produtores da Visão: só o realizado,
+ * com o mesmo prejuízo inicial digitado no Planejamento. Usada pela aba e pelo menu de impressão.
+ */
+export function montarFichas(analises: readonly ResultadoAnalise[], v: Visao, e: EstadoPlano): FichaDirpf[] {
+  const cpfs = [...new Set(v.arquivos.map((a) => a.abertura?.cpf ?? ''))];
+  return cpfs
+    .flatMap((cpf) => {
+      const doProdutor = analises.map((r) => r.arquivo).filter((a) => (a.abertura?.cpf ?? '') === cpf);
+      const f = montarFicha(doProdutor, v.ano, e.prejuizoInicial[cpf] ?? 0);
+      return f ? [f] : [];
+    })
+    .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+}
+
+/** Bloco 4: ficha Atividade Rural da DIRPF, recolhida (abre ao clicar). */
+function blocoDirpf(f: FichaDirpf | undefined): string {
+  if (!f) return '';
+  return `
+    <details class="plano-dirpf">
+      <summary><strong>Ficha Atividade Rural da DIRPF ${f.exercicio}</strong> <span class="ajuda">(ano-calendário ${f.anoCalendario}): receitas e despesas por mês, resultado e prejuízo, para conferir com a declaração${f.previa ? '. Prévia: não usar na declaração' : ''}</span></summary>
+      <div class="relatorio ficha-dirpf-tela">${htmlFichaDirpf(f)}</div>
+      <button type="button" class="botao-sec" data-imprimir-dirpf="${esc(f.cpf)}">${iconeImpressora}Imprimir a ficha deste produtor</button>
+    </details>`;
 }
 
 /** Primeiro ano carregado de um produtor (o prejuízo informado é o acumulado ANTES dele). */
@@ -288,7 +317,7 @@ function blocoCuidados(): string {
     </section>`;
 }
 
-function cartaoProdutor(p: PlanoProdutor, analises: readonly ResultadoAnalise[], e: EstadoPlano): string {
+function cartaoProdutor(p: PlanoProdutor, analises: readonly ResultadoAnalise[], e: EstadoPlano, ficha?: FichaDirpf): string {
   const ob = p.obrigatoriedade;
   const seloLcdpr = ob.obrigado
     ? `<span class="selo selo-alerta" title="Receita bruta acima de ${formatarReais(LIMITE_OBRIGATORIEDADE_LCDPR)}">LCDPR obrigatório</span>`
@@ -305,6 +334,7 @@ function cartaoProdutor(p: PlanoProdutor, analises: readonly ResultadoAnalise[],
       ${blocoProjecao(p)}
       ${blocoOpcoes(p)}
       ${blocoPrejuizo(p, analises, e)}
+      ${blocoDirpf(ficha)}
       ${!p.tabela.exata ? `<p class="plano-alerta">${iconeAlerta}A tabela progressiva de ${p.ano} ainda não está cadastrada no painel: o imposto usa a tabela de ${p.tabela.anoTabela}.</p>` : ''}
     </section>`;
 }
@@ -316,28 +346,32 @@ function cartaoProdutor(p: PlanoProdutor, analises: readonly ResultadoAnalise[],
 export function abaPlanejamento(raiz: HTMLElement, analises: readonly ResultadoAnalise[], v: Visao, e: EstadoPlano): void {
   const desenhar = (): void => {
     const planos = montarPlanos(analises, v, e);
+    const fichas = montarFichas(analises, v, e);
     const temPrevia = planos.some((p) => p.previa);
     const total = planos.reduce((s, p) => s + melhorImposto(p.irpf), 0);
     raiz.innerHTML = `
       <div class="cabecalho-aba plano-topo">
         <p class="ajuda">Compare as duas formas de apurar o IRPF da atividade rural, projete o ano e simule decisões antes de 31/12. ${planos.length > 1 ? `Cada produtor é calculado separadamente (art. 13). Imposto estimado somado: <strong class="num">${formatarReais(total)}</strong>.` : ''}</p>
-        <button type="button" class="botao-sec" data-imprimir-plano>${iconeImpressora}Imprimir planejamento</button>
+        <div class="plano-botoes">
+          <button type="button" class="botao-sec" data-imprimir-plano>${iconeImpressora}Imprimir planejamento</button>
+          <button type="button" class="botao-sec" data-imprimir-dirpf="">${iconeImpressora}Imprimir ficha DIRPF</button>
+        </div>
       </div>
       ${temPrevia ? `
         <div class="aviso-previa" role="note">
           <strong>Ano em andamento.</strong> O arquivo é uma prévia; a projeção completa o ano até dezembro.
           <label class="plano-alternar"><input type="checkbox" data-projecao ${e.usarProjecao ? 'checked' : ''} /> Calcular com a projeção até dezembro</label>
         </div>` : ''}
-      ${planos.map((p) => cartaoProdutor(p, analises, e)).join('')}
+      ${planos.map((p) => cartaoProdutor(p, analises, e, fichas.find((f) => f.cpf === p.cpf))).join('')}
       ${blocoSimulador(planos, e)}
       ${blocoCuidados()}
       <p class="nota-estimativa">${esc(AVISO_ESTIMATIVA)}</p>
     `;
-    ligar(planos);
+    ligar(planos, fichas);
   };
 
   /** Liga os campos. Valores em reais são lidos no "change" (ao sair do campo ou Enter). */
-  const ligar = (planos: PlanoProdutor[]): void => {
+  const ligar = (planos: PlanoProdutor[], fichas: FichaDirpf[]): void => {
     const valor = (input: HTMLInputElement): Centavos | null => {
       const c = lerReais(input.value);
       input.setCustomValidity(c === null ? 'Use o formato 50.000,00' : '');
@@ -371,6 +405,10 @@ export function abaPlanejamento(raiz: HTMLElement, analises: readonly ResultadoA
       desenhar();
     });
     raiz.querySelector<HTMLButtonElement>('[data-imprimir-plano]')?.addEventListener('click', () => imprimirPlanejamento(v, planos, e));
+    // Ficha DIRPF: vazio = todos os produtores (um por página); com CPF = só aquele.
+    raiz.querySelectorAll<HTMLButtonElement>('[data-imprimir-dirpf]').forEach((b) => {
+      b.addEventListener('click', () => imprimirDirpf(b.dataset.imprimirDirpf ? fichas.filter((f) => f.cpf === b.dataset.imprimirDirpf) : fichas));
+    });
 
     // ---- Cenários ----
     const avisar = (): void => e.aoMudarCenarios?.(e.cenarios);
