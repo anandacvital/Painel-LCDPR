@@ -41,3 +41,23 @@ export function formatarReais(centavos: Centavos): string {
   // para facilitar comparação em testes e exportação para CSV.
   return formatoBRL.format(centavos / 100).replace(/ /g, ' ');
 }
+
+/**
+ * Lê um valor digitado pela pessoa no formato brasileiro ("50.000", "1.234,56",
+ * "R$ 80 mil" não) e devolve centavos. Vazio = 0. Retorna null se não entender.
+ * Ponto é separador de milhar e vírgula é decimal.
+ */
+export function lerReais(texto: string): Centavos | null {
+  const limpo = texto.replace(/R\$/gi, '').replace(/\s/g, '');
+  if (limpo === '') return 0;
+  if (!/^\d{1,3}(\.\d{3})*(,\d{1,2})?$|^\d+(,\d{1,2})?$/.test(limpo)) return null;
+  const [inteiro, decimal = ''] = limpo.replace(/\./g, '').split(',');
+  const valor = Number(inteiro) * 100 + Number(decimal.padEnd(2, '0'));
+  return Number.isSafeInteger(valor) ? valor : null;
+}
+
+/** Valor em centavos para um campo de digitação: 5000000 → "50.000,00"; zero → "". */
+export function reaisParaCampo(centavos: Centavos): string {
+  if (!centavos) return '';
+  return (centavos / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}

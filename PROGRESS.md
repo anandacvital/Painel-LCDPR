@@ -67,14 +67,26 @@ _Última atualização: 26/11/2026 (Fase 2)_
   anterior só considera os produtores que têm arquivo no ano atual.
 - Parâmetros em `scripts/exemplos.ts`; `npm run fixtures` regera tudo. 110 testes passando.
 
+### Fase 4 — Planejamento IRPF (branch `fase-4-irpf`)
+- Aba "Planejamento IRPF" no Painel, um cartão por produtor (CPF): real x 20% lado a lado com selo da
+  melhor opção e alerta de perda do prejuízo; projeção até dezembro na prévia (com opção de usar só o
+  realizado); prejuízo encadeado pelos anos carregados (+ saldo anterior digitado); simulador "e se"
+  com ponto de equilíbrio; checklist de cuidados com base legal; relatório para impressão.
+- Imposto pela tabela progressiva ANUAL de 2024, 2025 e 2026 (páginas "Tributação de 20XX" da Receita)
+  + redução anual da Lei 15.270/2025 a partir de 2026. Vale também para a Visão Executiva, que agora
+  soma o imposto de cada produtor (cada CPF tributa a sua parte).
+- Limite do LCDPR conferido: R$ 4,8 mi (IN SRF 83/2001, art. 23-A, redação da IN RFB 1.903/2019).
+- Cálculos em `domain/planejamento.ts` e `domain/irpf.ts`; tela em `ui/painel/planejamento.ts`;
+  relatório em `report/planejamento.ts`. 120 testes.
+
 ## Em andamento
-- PR dos relatórios detalhados + exemplos.
+- PR da Fase 4.
 
 ## Pendências / dúvidas para a Ananda
 - Cópia do TXT real ainda na biblioteca de arquivos do projeto (aguardando "pode apagar").
 - Lei nº 9.250/1995, art. 18: texto não conferido (fonte indisponível).
 
-## Próximos passos (Fase 4 — Planejamento IRPF, branch `fase-4-irpf`)
-1. Aba Planejamento IRPF: resultado real x 20% da receita bruta, com prejuízo anterior informado pela usuária.
-2. Projeção até dezembro (sazonal pelo ano anterior ou média) e simulação antecipar despesas/postergar receitas.
-3. Insights com base legal e os cuidados (pagamento até 31/12, substância econômica).
+## Próximos passos
+- Ouvir a Ananda sobre a aba de Planejamento IRPF.
+- Cadastrar a tabela progressiva de cada novo ano em `TABELAS_ANUAIS` (`domain/irpf.ts`).
+- Tributação mínima de altas rendas (Lei 15.270/2025) não é calculada: só alertada.

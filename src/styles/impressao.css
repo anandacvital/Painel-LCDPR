@@ -282,7 +282,8 @@
   .rel-sem-quebra {
     break-inside: avoid;
   }
-  .rel-bloco h2 {
+  .rel-bloco h2,
+  .rel-bloco h3 {
     break-after: avoid;
   }
 }

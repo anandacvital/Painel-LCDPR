@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import { mesesNegativos, porImovel, porMes, principaisParticipantes, totalizar } from '../src/domain/agregacoes';
 import { consolidar, diagnosticarVinculo } from '../src/domain/consolidacao';
-import { calcularIrpf, mesesRealizados, projetarAno, simular } from '../src/domain/irpf';
+import { calcularIrpf, impostoProgressivo, mesesRealizados, pontoEquilibrio, projetarAno, simular, tabelaDoAno } from '../src/domain/irpf';
 import { criarData } from '../src/domain/datas';
 import type { ArquivoLcdpr, Lancamento } from '../src/parser/modelo';
 import { analisarTexto } from '../src/parser/analisar';
@@ -125,14 +125,15 @@ describe('IRPF', () => {
     expect(r.real.base).toBe(R(500_000));
     expect(r.presumido.base).toBe(R(200_000));
     expect(r.maisVantajosa).toBe('presumido');
-    expect(r.presumido.impostoEstimado).toBe(R(55_000));
+    // Tabela anual 2026: 200.000 × 27,5% − 10.904,66
+    expect(r.presumido.impostoEstimado).toBe(R(44_095.34));
     expect(r.economiaNoAno).toBe(R(82_500));
   });
 
   it('margem baixa: resultado real é mais vantajoso', () => {
     const r = calcularIrpf({ receitaBruta: R(1_000_000), despesas: R(900_000) });
     expect(r.maisVantajosa).toBe('real');
-    expect(r.real.impostoEstimado).toBe(R(27_500));
+    expect(r.real.impostoEstimado).toBe(R(16_595.34));
   });
 
   it('compensa prejuízo anterior sem limite de 30% e informa a perda na opção 20%', () => {
@@ -149,6 +150,30 @@ describe('IRPF', () => {
     expect(r.real.prejuizoRemanescente).toBe(R(250));
     expect(r.presumido.cabivel).toBe(false);
     expect(r.maisVantajosa).toBe('real');
+  });
+
+  it('tabela progressiva anual de cada ano-calendário (Receita Federal)', () => {
+    expect(impostoProgressivo(R(30_000), 2024)).toBe(R(227.76)); // 30.000 × 7,5% − 2.022,24
+    expect(impostoProgressivo(R(28_000), 2025)).toBe(0); // faixa isenta de 2025
+    expect(impostoProgressivo(R(70_000), 2025)).toBe(R(8_396.22)); // 70.000 × 27,5% − 10.853,78
+    expect(impostoProgressivo(R(500_000), 2026)).toBe(R(126_595.34));
+    expect(tabelaDoAno(2023)).toMatchObject({ anoTabela: 2024, exata: false });
+    expect(tabelaDoAno(2030)).toMatchObject({ anoTabela: 2026, exata: false });
+  });
+
+  it('redução anual da Lei 15.270/2025 só a partir de 2026', () => {
+    // 50.000 em 2026: 50.000 × 22,5% − 8.105,85 = 3.144,15; redução de até 2.694,15 → 450,00
+    expect(impostoProgressivo(R(50_000), 2026)).toBe(R(450));
+    // 70.000 em 2026: 8.345,34 − (8.429,73 − 0,095575 × 70.000 = 1.739,48) = 6.605,86
+    expect(impostoProgressivo(R(70_000), 2026)).toBe(R(6_605.86));
+    // acima de 88.200 não há redução
+    expect(impostoProgressivo(R(100_000), 2026)).toBe(R(16_595.34));
+  });
+
+  it('ponto de equilíbrio: despesa a mais que faz o real empatar com os 20%', () => {
+    expect(pontoEquilibrio({ receitaBruta: R(1_000_000), despesas: R(500_000) })).toBe(R(300_000));
+    expect(pontoEquilibrio({ receitaBruta: R(1_000_000), despesas: R(500_000), prejuizoAnterior: R(100_000) })).toBe(R(200_000));
+    expect(pontoEquilibrio({ receitaBruta: R(1_000_000), despesas: R(900_000) })).toBe(0);
   });
 
   it('insights citam a base legal', () => {
@@ -187,7 +212,7 @@ describe('projeção e simulação', () => {
 
   it('simulação mostra a economia e os cuidados', () => {
     const s = simular({ receitaBruta: R(1_000_000), despesas: R(850_000) }, { anteciparDespesas: R(50_000) });
-    // antes: real 150 mil (27,5% = 41.250); depois: real 100 mil (27.500) → economia 13.750
+    // antes: real 150 mil; depois: real 100 mil; os dois na faixa de 27,5% → economia 13.750
     expect(s.variacaoImposto).toBe(R(13_750));
     expect(s.cuidados.join(' ')).toContain('31/12');
   });

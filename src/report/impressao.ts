@@ -23,14 +23,14 @@ import { formatarDataIso } from '../domain/datas';
 import { destaquesExecutivos, nomeMes, tituloImoveis, tituloReceitasDespesas } from '../domain/destaques';
 import { formatarReais } from '../domain/dinheiro';
 import { formatarCpfCnpj } from '../domain/documentos';
-import { AVISO_ESTIMATIVA, calcularIrpf } from '../domain/irpf';
+import { AVISO_ESTIMATIVA } from '../domain/irpf';
 import { variacao } from '../domain/destaques';
 import { FORMA_APUR, TIPO_EXPLORACAO } from '../parser/leiaute';
 import type { ResultadoAnalise, Severidade } from '../parser/modelo';
 import { COR, desenharGrafico, eixoMeses, eixoValor, liberarGraficos, reaisCompacto } from '../ui/graficos/echarts';
 import { esc, numeroBR } from '../ui/html';
 import { DESCRICAO_CRITERIO } from '../domain/consolidacao';
-import { avisoPrevia, nomeImovel, textoComparacao, type Visao } from '../ui/painel/contexto';
+import { avisoPrevia, nomeImovel, TEXTO_OPCAO, textoComparacao, type Visao } from '../ui/painel/contexto';
 import { agruparPorRegra, conclusaoSaude, ROTULO } from '../ui/saudeArquivo';
 
 const pct = (f: number | null): string => (f === null ? '—' : `${(f * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`);
@@ -140,8 +140,7 @@ function linhaVariacao(atual: number, anterior: number | undefined, maiorEhMelho
 export function htmlRelatorioExecutivo(v: Visao): string {
   const t = v.totais;
   const a = v.anterior?.totais;
-  const irpf = calcularIrpf({ receitaBruta: t.receitas, despesas: t.despesas });
-  const imposto = irpf.maisVantajosa === 'presumido' ? irpf.presumido.impostoEstimado : irpf.real.impostoEstimado;
+  const imposto = v.irpf.atual.imposto;
   const destaques = destaquesExecutivos(t, v.meses, a, textoComparacao(v));
   const cpfs = [...new Set(v.arquivos.map((x) => x.abertura?.cpf).filter((c): c is string => !!c))];
 
@@ -180,7 +179,7 @@ export function htmlRelatorioExecutivo(v: Visao): string {
         <div class="rel-kpi rel-kpi-despesa"><span>Despesas</span><strong>${formatarReais(t.despesas)}</strong>${linhaVariacao(t.despesas, a?.despesas, false, vs)}</div>
         <div class="rel-kpi ${t.resultado < 0 ? 'rel-kpi-despesa' : 'rel-kpi-receita'}"><span>Resultado</span><strong>${formatarReais(t.resultado)}</strong>${linhaVariacao(t.resultado, a?.resultado, true, vs)}</div>
         <div class="rel-kpi"><span>Margem</span><strong>${pct(t.margem)}</strong></div>
-        <div class="rel-kpi"><span>IRPF estimado</span><strong>${formatarReais(imposto)}</strong><small>${irpf.maisVantajosa === 'presumido' ? 'opção de 20% da receita bruta' : 'resultado real'}</small></div>
+        <div class="rel-kpi"><span>IRPF estimado</span><strong>${formatarReais(imposto)}</strong><small>${TEXTO_OPCAO[v.irpf.atual.opcao]}</small></div>
       </div>
       <p class="rel-nota">${esc(AVISO_ESTIMATIVA)}</p>
       ${avisos.length ? `<div class="rel-avisos"><strong>Atenção na consolidação:</strong><ul>${avisos.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></div>` : ''}

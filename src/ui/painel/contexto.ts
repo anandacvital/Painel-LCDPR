@@ -6,9 +6,20 @@
  */
 import { mensal, totalizar, type TotalMensal, type Totais } from '../../domain/agregacoes';
 import { consolidar, type CriterioConsolidacao, type ResultadoConsolidacao } from '../../domain/consolidacao';
+import { calcularIrpf } from '../../domain/irpf';
+import { detectarPrevia, melhorImposto } from '../../domain/planejamento';
 import type { ArquivoLcdpr, Lancamento, ResultadoAnalise, Semaforo } from '../../parser/modelo';
 
+export { detectarPrevia };
+
 export const TODOS = 'todos';
+
+/** Como o imposto foi estimado, por opção mais vantajosa. */
+export const TEXTO_OPCAO = {
+  presumido: 'pela opção de 20% da receita bruta',
+  real: 'pelo resultado real',
+  misto: 'na melhor opção de cada produtor',
+} as const;
 
 export interface LancamentoVisao extends Lancamento {
   cpf: string;
@@ -36,6 +47,31 @@ export interface Visao {
   previa: { fim: string; ateMes: number } | null;
   consolidacao: ResultadoConsolidacao | null;
   semaforo: Semaforo;
+  /**
+   * IRPF estimado: soma do imposto de CADA produtor (cada CPF tributa a sua parte,
+   * Lei nº 8.023/1990, art. 13) na opção mais vantajosa para cada um, sobre o
+   * realizado e sem prejuízo anterior. `anterior` usa o mesmo recorte de período.
+   */
+  irpf: { atual: IrpfVisao; anterior: IrpfVisao | null };
+}
+
+export interface IrpfVisao {
+  imposto: number;
+  /** Opção mais vantajosa: igual para todos os produtores, ou "misto". */
+  opcao: 'presumido' | 'real' | 'misto';
+}
+
+function irpfDosArquivos(arquivos: readonly ArquivoLcdpr[], ano: number, ateDiaMes?: string): IrpfVisao {
+  let imposto = 0;
+  const opcoes = new Set<'presumido' | 'real'>();
+  for (const a of arquivos) {
+    const lanc = ateDiaMes ? a.lancamentos.filter((l) => l.data.iso.slice(5) <= ateDiaMes) : a.lancamentos;
+    const t = totalizar(lanc);
+    const r = calcularIrpf({ receitaBruta: t.receitas, despesas: t.despesas, ano });
+    imposto += melhorImposto(r);
+    opcoes.add(r.maisVantajosa === 'presumido' ? 'presumido' : 'real');
+  }
+  return { imposto, opcao: opcoes.size > 1 ? 'misto' : opcoes.has('presumido') ? 'presumido' : 'real' };
 }
 
 const PIOR: Record<Semaforo, number> = { verde: 0, amarelo: 1, vermelho: 2 };
@@ -52,17 +88,6 @@ function recortar(analises: readonly ResultadoAnalise[], produtor: string, ano: 
   }
   const c = consolidar(arquivos, ano, criterio);
   return { doAno, arquivos, consolidacao: c, lancamentos: c.lancamentos };
-}
-
-/** Detecta prévia: arquivo sem situação especial com data final antes de 31/12. */
-export function detectarPrevia(arquivos: readonly ArquivoLcdpr[]): { fim: string; ateMes: number } | null {
-  const finais = arquivos
-    .filter((a) => (a.abertura?.sitEspecial || '0') === '0')
-    .map((a) => a.abertura?.dtFin)
-    .filter((d): d is NonNullable<typeof d> => !!d && !(d.mes === 12 && d.dia === 31));
-  if (finais.length === 0) return null;
-  const fim = finais.map((d) => d.iso).sort().at(-1)!;
-  return { fim, ateMes: Number(fim.slice(5, 7)) };
 }
 
 export function montarVisao(
@@ -94,6 +119,7 @@ export function montarVisao(
     anterior: antLanc ? { totais: totalizar(antLanc), meses: mensal(antLanc, ano - 1) } : null,
     previa,
     consolidacao: atual.consolidacao,
+    irpf: { atual: irpfDosArquivos(atual.arquivos, ano), anterior: ant ? irpfDosArquivos(ant.arquivos, ano - 1, diaMes) : null },
     semaforo: atual.doAno.reduce<Semaforo>((pior, r) => (PIOR[r.saude.semaforo] > PIOR[pior] ? r.saude.semaforo : pior), 'verde'),
   };
 }
