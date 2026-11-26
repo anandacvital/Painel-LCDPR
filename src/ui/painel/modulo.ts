@@ -11,7 +11,8 @@ import { formatarCpfCnpj } from '../../domain/documentos';
 import type { ResultadoAnalise, Semaforo } from '../../parser/modelo';
 import { liberarGraficos } from '../graficos/echarts';
 import { esc } from '../html';
-import { iconeAlerta } from '../icones';
+import { iconeAlerta, iconeImpressora } from '../icones';
+import { imprimirExecutivo } from '../../report/impressao';
 import { abaComparativo, abaFluxoCaixa, abaImoveis, abaReceitasDespesas, abaVisaoExecutiva } from './abasGraficas';
 import { montarVisao, TODOS } from './contexto';
 import { abaDetalhamento } from './detalhamento';
@@ -92,7 +93,8 @@ export function montarPainel(raiz: HTMLElement, analises: readonly ResultadoAnal
       ${visao ? `
         <button type="button" class="indicador-saude semaforo semaforo-${visao.semaforo}" data-validador title="Abrir o Validador">
           ${esc(SAUDE[visao.semaforo])}<span class="botao-link">ver no Validador</span>
-        </button>` : ''}
+        </button>
+        <button type="button" class="botao botao-imprimir" data-imprimir="executivo">${iconeImpressora}Imprimir relatório executivo</button>` : ''}
     </section>
     ${avisos.length ? `<section class="avisos-consolidacao" role="note">${iconeAlerta}<ul>${avisos.map((a) => `<li>${esc(a)}</li>`).join('')}</ul></section>` : ''}
     <nav class="abas-painel" role="tablist" aria-label="Abas do Painel">
@@ -141,4 +143,5 @@ export function montarPainel(raiz: HTMLElement, analises: readonly ResultadoAnal
     });
   });
   raiz.querySelector<HTMLButtonElement>('[data-validador]')?.addEventListener('click', irParaValidador);
+  if (visao) raiz.querySelector<HTMLButtonElement>('[data-imprimir="executivo"]')?.addEventListener('click', () => imprimirExecutivo(visao));
 }

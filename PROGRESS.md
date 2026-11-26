@@ -40,8 +40,18 @@ _Última atualização: 26/11/2026 (Fase 2)_
 - ECharts 6.1 (modular, SVG) com a paleta Grupo Paraná; todo título diz a conclusão (`domain/destaques.ts`).
 - 87 testes passando.
 
+### Fase 5 (antecipada) — Relatórios para impressão (branch `fase-5-impressao`)
+- Botão "Imprimir / salvar PDF" no Validador e "Imprimir relatório executivo" no Painel.
+- Impressão pelo próprio navegador (A4 retrato, `src/report/impressao.ts` + `styles/impressao.css`):
+  nada sai do computador, PDF com texto selecionável e gráficos vetoriais.
+- Validador: cabeçalho (produtor, CPF, ano-base, arquivo, emissão), conclusão, contagens,
+  identificação, resumo por regra e TODAS as ocorrências com linha, campo e como corrigir.
+- Executivo: indicadores com variação, aviso de estimativa do IRPF, avisos de consolidação,
+  destaques, gráfico mensal, tabela mês a mês, imóveis (gráfico e tabela), 5 maiores clientes e fornecedores.
+- 90 testes passando.
+
 ## Em andamento
-- PR da Fase 3.
+- PR dos relatórios para impressão.
 
 ## Pendências / dúvidas para a Ananda
 - Cópia do TXT real ainda na biblioteca de arquivos do projeto (aguardando "pode apagar").

@@ -3,6 +3,7 @@
  */
 import './styles/base.css';
 import './styles/painel.css';
+import './styles/impressao.css';
 import { iniciarApp } from './ui/app';
 
 const raiz = document.querySelector<HTMLElement>('#app');

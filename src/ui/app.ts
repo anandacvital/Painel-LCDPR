@@ -25,6 +25,7 @@ import {
 import { esc, numeroBR } from './html';
 import { iconeArquivo, iconeBroto, iconeCadeado, iconeFechar, iconeLixeira } from './icones';
 import { montarSaudeArquivo } from './saudeArquivo';
+import { imprimirValidador } from '../report/impressao';
 import { montarPainel, novoEstadoPainel, type EstadoPainel } from './painel/modulo';
 
 type Modulo = 'validador' | 'painel';
@@ -150,6 +151,7 @@ export function iniciarApp(raiz: HTMLElement): void {
       semaforoTopo.className = `semaforo semaforo-${sel.saude.semaforo}`;
       semaforoTopo.textContent = `Saúde do arquivo: ${ROTULO_SEMAFORO[sel.saude.semaforo]}`;
       montarSaudeArquivo(aba, sel);
+      aba.querySelector<HTMLButtonElement>('[data-imprimir="validador"]')?.addEventListener('click', () => imprimirValidador(sel));
     } else {
       semaforoTopo.hidden = true;
       aba.innerHTML = '';
