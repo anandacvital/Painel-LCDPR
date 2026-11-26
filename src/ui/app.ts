@@ -21,6 +21,8 @@ import {
   preferenciaManterDados,
   removerAnalise,
   salvarAnalise,
+  carregarCenarios,
+  salvarCenarios,
 } from './armazenamento';
 import { esc, numeroBR } from './html';
 import { iconeArquivo, iconeBroto, iconeCadeado, iconeFechar, iconeLixeira } from './icones';
@@ -57,6 +59,11 @@ export function iniciarApp(raiz: HTMLElement): void {
     manterDados: preferenciaManterDados(),
     modulo: 'validador',
     painel: novoEstadoPainel(),
+  };
+  // Cenários do simulador de IRPF: gravados no navegador só com "Manter" ligado.
+  estado.painel.plano.cenariosGuardados = () => estado.manterDados;
+  estado.painel.plano.aoMudarCenarios = (lista) => {
+    if (estado.manterDados) void salvarCenarios(lista);
   };
 
   raiz.innerHTML = `
@@ -231,6 +238,7 @@ export function iniciarApp(raiz: HTMLElement): void {
     definirPreferenciaManterDados(manter.checked);
     if (manter.checked) {
       for (const [chave, r] of estado.analises) await salvarAnalise(chave, r);
+      await salvarCenarios(estado.painel.plano.cenarios);
       status.textContent = 'As análises serão mantidas neste navegador até você apagá-las.';
     } else {
       await apagarTudo();
@@ -241,6 +249,7 @@ export function iniciarApp(raiz: HTMLElement): void {
   raiz.querySelector<HTMLButtonElement>('#apagar-tudo')!.addEventListener('click', async () => {
     await apagarTudo();
     estado.analises.clear();
+    estado.painel.plano.cenarios = [];
     estado.selecionada = null;
     estado.manterDados = false;
     manter.checked = false;
@@ -250,6 +259,9 @@ export function iniciarApp(raiz: HTMLElement): void {
 
   // ---- Restaura análises salvas (só se a pessoa optou por manter) ----------------------------
   if (estado.manterDados) {
+    void carregarCenarios().then((cenarios) => {
+      if (cenarios.length) estado.painel.plano.cenarios = cenarios;
+    });
     void carregarAnalises().then((salvas) => {
       for (const r of salvas) estado.analises.set(chaveDe(r), r);
       if (salvas.length) {
