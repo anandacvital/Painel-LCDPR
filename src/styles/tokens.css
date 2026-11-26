@@ -35,3 +35,16 @@
   --sombra: 0 1px 2px rgba(11, 35, 71, 0.06), 0 8px 24px rgba(11, 35, 71, 0.08);
   --transicao: 180ms ease;
 }
+
+/*
+ * Cor de ATENÇÃO (âmbar escuro) para o nível "amarelo" do semáforo de saúde.
+ * Não faz parte da paleta institucional; foi adicionada porque o semáforo
+ * exige três níveis. Tom escolhido para ter contraste AA sobre branco.
+ */
+:root {
+  --gp-atencao: #8a5a00;
+  --gp-atencao-fundo: #fff4d6;
+  --gp-alerta-fundo: #fde8eb;
+  --gp-agro-fundo: #e3f1ea;
+  --gp-borda: #d6e2f0;
+}

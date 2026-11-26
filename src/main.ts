@@ -1,8 +1,8 @@
 /**
- * Ponto de entrada do painel: carrega os estilos e monta a tela inicial.
+ * Ponto de entrada do painel: carrega os estilos e inicia a aplicação.
  */
 import './styles/base.css';
-import { montarTelaInicial } from './ui/telaInicial';
+import { iniciarApp } from './ui/app';
 
 const raiz = document.querySelector<HTMLElement>('#app');
-if (raiz) montarTelaInicial(raiz);
+if (raiz) iniciarApp(raiz);
