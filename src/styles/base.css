@@ -153,6 +153,7 @@ button:disabled {
   transition: background var(--transicao), transform var(--transicao);
 }
 .botao svg,
+.botao-sec svg,
 .botao-perigo svg {
   width: 18px;
   height: 18px;

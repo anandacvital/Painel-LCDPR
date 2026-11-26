@@ -44,7 +44,7 @@ export function abaVisaoExecutiva(raiz: HTMLElement, v: Visao): void {
       ${cartaoKpi({ rotulo: 'Receita bruta', valor: t.receitas, tom: 'agro', anterior: a?.receitas ?? null })}
       ${cartaoKpi({ rotulo: 'Despesas', valor: t.despesas, anterior: a?.despesas ?? null, maiorEhMelhor: false })}
       ${cartaoKpi({ rotulo: 'Resultado', valor: t.resultado, tom: t.resultado < 0 ? 'negativo' : 'positivo', anterior: a?.resultado ?? null })}
-      ${cartaoKpi({ rotulo: 'Margem', valor: null, formatado: pctTexto(t.margem), atualComparavel: t.margem ?? undefined, anterior: a?.margem ?? null })}
+      ${cartaoKpi({ rotulo: 'Margem', valor: null, formatado: pctTexto(t.margem), atualComparavel: t.margem ?? undefined, anterior: a?.margem ?? null, emPontos: true })}
       ${cartaoKpi({
         rotulo: 'IRPF estimado',
         valor: melhor(irpf),
@@ -224,7 +224,7 @@ export function abaReceitasDespesas(raiz: HTMLElement, v: Visao): void {
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
     grid: { left: 8, right: 24, top: 8, bottom: 40, containLabel: true },
     xAxis: eixoValor(),
-    yAxis: { type: 'category', inverse: true, data: porConta.map((g) => { const [cpf, cod] = g.chave.split('|'); return nomeConta(v, cpf!, cod!); }), axisTick: { show: false }, axisLabel: { color: COR.textoSuave } },
+    yAxis: { type: 'category', inverse: true, data: porConta.map((g) => { const [cpf, cod] = g.chave.split('|'); return nomeConta(v, cpf!, cod!); }), axisTick: { show: false }, axisLabel: { color: COR.textoSuave, width: 130, overflow: 'break' } },
     series: [
       { name: 'Receitas', type: 'bar', data: porConta.map((g) => g.receitas), itemStyle: { color: COR.receita } },
       { name: 'Despesas', type: 'bar', data: porConta.map((g) => g.despesas), itemStyle: { color: COR.despesa } },
@@ -315,11 +315,13 @@ export function abaComparativo(raiz: HTMLElement, analises: readonly ResultadoAn
 
   raiz.innerHTML = `
     <p class="ajuda">O comparativo sempre considera todos os produtores carregados, independentemente do filtro do cabeçalho. Soma simples (sem ajuste de condôminos).</p>
-    ${molduraGrafico('g-produtores', tituloProd, `Receitas, despesas e resultado por produtor em ${ano}.`, Math.max(260, produtores.length * 70 + 80))}
+    ${produtores.length < 2
+      ? `<section class="card"><h3>${esc(tituloProd)}</h3><p class="ajuda">Com arquivos de dois ou mais produtores do mesmo ano, este quadro mostra receitas, despesas e resultado lado a lado.</p></section>`
+      : molduraGrafico('g-produtores', tituloProd, `Receitas, despesas e resultado por produtor em ${ano}.`, Math.max(260, produtores.length * 70 + 80))}
     ${molduraGrafico('g-anos', tituloAnos, 'Resultado acumulado mês a mês de cada ano (todos os produtores).', 340)}
   `;
 
-  desenharGrafico(el(raiz, 'g-produtores'), {
+  if (produtores.length >= 2) desenharGrafico(el(raiz, 'g-produtores'), {
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
     grid: { left: 8, right: 24, top: 8, bottom: 40, containLabel: true },
     xAxis: eixoValor(),
@@ -327,7 +329,7 @@ export function abaComparativo(raiz: HTMLElement, analises: readonly ResultadoAn
     series: [
       { name: 'Receitas', type: 'bar', data: produtores.map((p) => p.t.receitas), itemStyle: { color: COR.receita } },
       { name: 'Despesas', type: 'bar', data: produtores.map((p) => p.t.despesas), itemStyle: { color: COR.despesa } },
-      { name: 'Resultado', type: 'bar', data: produtores.map((p) => ({ value: p.t.resultado, itemStyle: { color: p.t.resultado < 0 ? COR.negativo : COR.navy } })) },
+      { name: 'Resultado', type: 'bar', itemStyle: { color: COR.navy }, data: produtores.map((p) => ({ value: p.t.resultado, itemStyle: { color: p.t.resultado < 0 ? COR.negativo : COR.navy } })) },
     ],
   });
 

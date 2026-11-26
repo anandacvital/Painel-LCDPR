@@ -62,7 +62,7 @@ export function base(): echarts.EChartsCoreOption {
 
 export const eixoValor = () => ({
   type: 'value' as const,
-  axisLabel: { formatter: reaisCompacto, color: COR.textoSuave, fontFamily: FONTE_NUM },
+  axisLabel: { formatter: reaisCompacto, color: COR.textoSuave, fontFamily: FONTE_NUM, hideOverlap: true },
   splitLine: { lineStyle: { color: COR.grade } },
 });
 

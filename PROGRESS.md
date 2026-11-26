@@ -26,15 +26,28 @@ _Última atualização: 26/11/2026 (Fase 2)_
 - Projeção até dezembro (sazonal ou média) e simulação antecipar/postergar.
 - 69 testes passando.
 
+### LCDPR de exemplo (PR #4, já na `main`)
+- `tests/fixtures/exemplo-lcdpr-2024.txt` e `-2025.txt`: produtor fictício, 3 imóveis (um em condomínio 60/40),
+  calendário agrícola de MS, resultado positivo (margem ~13% e ~30%), Validador sem erros nem alertas.
+
+### Fase 3 — Painel do Livro Caixa (branch `fase-3-painel`)
+- Dois módulos no cabeçalho: Validador (antes de transmitir) | Painel do Livro Caixa (arquivos transmitidos).
+- Barra do Painel: produtor (todos ou um), ano-base, critério de consolidação (com avisos) e saúde dos arquivos.
+- Abas: Visão Executiva (KPIs com variação vs. ano anterior, IRPF estimado, 3 destaques), Fluxo de Caixa
+  (cascata, acumulado, sazonalidade), Receitas & Despesas (top 10, tipo de documento, contas, tabela mensal),
+  Imóveis (resultado por imóvel e cartões), Comparativo (produtores e ano contra ano), Detalhamento
+  (todos os Q100 com filtros, busca sem acento, ordenação, rolagem virtual e CSV).
+- ECharts 6.1 (modular, SVG) com a paleta Grupo Paraná; todo título diz a conclusão (`domain/destaques.ts`).
+- 87 testes passando.
+
 ## Em andamento
-- PR da Fase 2 aguardando revisão.
+- PR da Fase 3.
 
 ## Pendências / dúvidas para a Ananda
 - Cópia do TXT real ainda na biblioteca de arquivos do projeto (aguardando "pode apagar").
 - Lei nº 9.250/1995, art. 18: texto não conferido (fonte indisponível).
 
-## Próximos passos (Fase 3 — Painel do Livro Caixa, branch `fase-3-painel`)
-1. Separar a aplicação em dois módulos: Validador | Painel do Livro Caixa.
-2. ECharts com a paleta Grupo Paraná; títulos que dizem a conclusão.
-3. Abas: Visão Executiva, Fluxo de Caixa, Receitas & Despesas, Imóveis, Comparativo, Detalhamento.
-4. Cabeçalho com seletor de produtor (consolidado/individual), ano e saúde do arquivo.
+## Próximos passos (Fase 4 — Planejamento IRPF, branch `fase-4-irpf`)
+1. Aba Planejamento IRPF: resultado real x 20% da receita bruta, com prejuízo anterior informado pela usuária.
+2. Projeção até dezembro (sazonal pelo ano anterior ou média) e simulação antecipar despesas/postergar receitas.
+3. Insights com base legal e os cuidados (pagamento até 31/12, substância econômica).

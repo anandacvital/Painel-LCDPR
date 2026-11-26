@@ -47,7 +47,7 @@ desenvolvedora): explicar decisões em linguagem simples e comentar o código.
 |---|---|
 | `src/parser/` | leitura do TXT, encoding, tabela de registros, validações |
 | `src/domain/` | cálculos e regras (sem dependência de tela) |
-| `src/ui/` | abas e componentes |
+| `src/ui/` | `app.ts` (módulos Validador e Painel), `saudeArquivo.ts`, `painel/` (abas do Painel), `graficos/` (ECharts) |
 | `src/report/` | PDF |
 | `src/workers/` | Web Worker do parser |
 | `src/styles/` | `tokens.css` (paleta e fontes) e `base.css` |
@@ -140,3 +140,6 @@ LCDPR, perguntas 47 e 52; Lei nº 8.023/1990, art. 13). Por isso o critério pad
 - 26/11/2026: repositório público + GitHub Pages gratuito (sem orçamento para plano pago).
   Consequência: qualquer arquivo versionado fica público na hora; a verificação de
   sigilo e o .gitignore são a barreira e não podem ser afrouxados.
+- 26/11/2026: Fase 3 — Validador e Painel compartilham os arquivos carregados; o Painel usa uma única
+  "Visão" (`ui/painel/contexto.ts`) para todas as abas. Margem compara em pontos percentuais.
+  CSV mantém número negativo puro como número (não é fórmula). LCDPR de exemplo em `tests/fixtures/exemplo-lcdpr-*.txt`.

@@ -4,7 +4,12 @@ import { celulaCsv, csvOcorrencias } from '../src/report/csv';
 describe('CSV', () => {
   it('protege contra fórmula (CSV injection)', () => {
     expect(celulaCsv('=SOMA(A1)')).toBe("'=SOMA(A1)");
-    expect(celulaCsv('-10')).toBe("'-10");
+    expect(celulaCsv('-1+2')).toBe("'-1+2");
+    expect(celulaCsv('@x')).toBe("'@x");
+  });
+  it('mantém número negativo puro como número (para o Excel somar)', () => {
+    expect(celulaCsv('-10')).toBe('-10');
+    expect(celulaCsv('-1234,56')).toBe('-1234,56');
     expect(celulaCsv('@x')).toBe("'@x");
   });
   it('escapa ponto e vírgula e aspas', () => {

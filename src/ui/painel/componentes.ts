@@ -8,7 +8,15 @@ import { esc } from '../html';
 export type Tom = 'neutro' | 'positivo' | 'negativo' | 'agro';
 
 /** Variação "▲ 12,3% vs. ano anterior" com texto (não depende só da cor). */
-function blocoVariacao(atual: number, anterior: number | null | undefined, maiorEhMelhor: boolean): string {
+function blocoVariacao(atual: number, anterior: number | null | undefined, maiorEhMelhor: boolean, emPontos = false): string {
+  if (emPontos) {
+    // Para percentuais (margem): diferença em pontos percentuais, não "variação de uma variação".
+    if (anterior === null || anterior === undefined) return '<span class="kpi-var">sem ano anterior para comparar</span>';
+    const dif = atual - anterior;
+    const bom = dif >= 0 === maiorEhMelhor;
+    const txt = `${dif >= 0 ? '▲ alta' : '▼ queda'} de ${(Math.abs(dif) * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} p.p. vs. ano anterior`;
+    return `<span class="kpi-var ${bom ? 'var-boa' : 'var-ruim'}">${txt}</span>`;
+  }
   const v = variacao(atual, anterior);
   if (v === null) return '<span class="kpi-var">sem ano anterior para comparar</span>';
   const subiu = v >= 0;
@@ -27,12 +35,14 @@ export function cartaoKpi(opcoes: {
   /** Para valores que não são reais (ex.: margem em %). */
   formatado?: string;
   atualComparavel?: number | undefined;
+  /** Comparar em pontos percentuais (para margens). */
+  emPontos?: boolean;
 }): string {
   const tom = opcoes.tom ?? 'neutro';
   const valor = opcoes.formatado ?? (opcoes.valor === null ? '—' : formatarReais(opcoes.valor));
   const comparar = opcoes.atualComparavel ?? opcoes.valor;
   const variacaoHtml = opcoes.anterior !== undefined && comparar !== null
-    ? blocoVariacao(comparar, opcoes.anterior, opcoes.maiorEhMelhor ?? true)
+    ? blocoVariacao(comparar, opcoes.anterior, opcoes.maiorEhMelhor ?? true, opcoes.emPontos)
     : '';
   return `
     <div class="kpi-painel card tom-${tom}">

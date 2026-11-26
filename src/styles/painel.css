@@ -1,0 +1,414 @@
+/*
+ * ESTILOS DO PAINEL DO LIVRO CAIXA (Fase 3): seletor de módulos, barra de
+ * seleção, abas, cartões de KPI, gráficos, imóveis e detalhamento.
+ * Cores só por tokens (tokens.css).
+ */
+
+/* ---- Módulos no cabeçalho ---- */
+.modulos {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.1);
+}
+.modulos button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 6px 14px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--gp-branco);
+  font-weight: 600;
+  line-height: 1.2;
+  transition: background var(--transicao);
+}
+.modulos button small {
+  font-weight: 400;
+  font-size: 0.72rem;
+  opacity: 0.8;
+}
+.modulos button:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+.modulos button[aria-pressed='true'] {
+  background: var(--gp-branco);
+  color: var(--gp-navy);
+}
+
+/* ---- Barra de seleção ---- */
+.barra-painel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--esp-3);
+  padding: var(--esp-3) var(--esp-4);
+}
+.barra-painel label,
+.filtros-detalhe label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--gp-texto-suave);
+}
+.barra-painel select,
+.filtros-detalhe select,
+.filtros-detalhe input {
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 400;
+  padding: 7px 10px;
+  border: 1px solid var(--gp-borda);
+  border-radius: 8px;
+  background: var(--gp-branco);
+  color: var(--gp-texto);
+  max-width: 100%;
+}
+.barra-painel .criterio {
+  flex: 1 1 280px;
+}
+.indicador-saude {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--esp-2);
+  border: 0;
+}
+.indicador-saude .botao-link {
+  text-decoration: underline;
+  font-weight: 600;
+}
+
+.avisos-consolidacao {
+  display: flex;
+  gap: var(--esp-2);
+  margin-top: var(--esp-3);
+  padding: var(--esp-3);
+  border-radius: var(--raio);
+  background: var(--gp-atencao-fundo);
+  color: var(--gp-atencao);
+}
+.avisos-consolidacao ul {
+  margin: 0;
+  padding-left: 1.1em;
+}
+
+/* ---- Abas ---- */
+.abas-painel {
+  display: flex;
+  gap: 2px;
+  margin: var(--esp-4) 0 var(--esp-3);
+  border-bottom: 2px solid var(--gp-borda);
+  overflow-x: auto;
+}
+.abas-painel button {
+  flex: 0 0 auto;
+  padding: 10px 16px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  background: transparent;
+  color: var(--gp-texto-suave);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.abas-painel button:hover {
+  color: var(--gp-navy);
+}
+.abas-painel button[aria-selected='true'] {
+  color: var(--gp-navy);
+  border-bottom-color: var(--gp-azul-1);
+}
+.conteudo-painel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-3);
+}
+.vazio-painel {
+  text-align: center;
+  color: var(--gp-texto-suave);
+}
+
+/* ---- KPIs ---- */
+.grade-kpi-painel {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: var(--esp-3);
+}
+.kpi-painel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--esp-3);
+  border-top: 4px solid var(--gp-azul-2);
+}
+.kpi-painel.tom-agro,
+.kpi-painel.tom-positivo {
+  border-top-color: var(--gp-agro);
+}
+.kpi-painel.tom-negativo {
+  border-top-color: var(--gp-alerta);
+}
+.kpi-painel-rotulo {
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--gp-texto-suave);
+}
+.kpi-painel-valor {
+  font-size: 1.45rem;
+  font-weight: 500;
+  color: var(--gp-navy);
+}
+.tom-negativo .kpi-painel-valor {
+  color: var(--gp-alerta);
+}
+.kpi-var,
+.kpi-painel-texto {
+  font-size: 0.8rem;
+  color: var(--gp-texto-suave);
+}
+.kpi-var.var-boa {
+  color: var(--gp-agro);
+  font-weight: 600;
+}
+.kpi-var.var-ruim {
+  color: var(--gp-alerta);
+  font-weight: 600;
+}
+.nota-estimativa {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--gp-texto-suave);
+}
+
+.destaques ol {
+  margin: var(--esp-2) 0 0;
+  padding-left: 1.3em;
+  display: grid;
+  gap: var(--esp-2);
+}
+
+/* ---- Gráficos ---- */
+.grafico-card h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.35;
+}
+.grafico {
+  width: 100%;
+  margin-top: var(--esp-3);
+}
+.duas-colunas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: var(--esp-3);
+}
+
+.agro {
+  color: var(--gp-agro);
+}
+.negativo {
+  color: var(--gp-alerta);
+}
+
+/* ---- Imóveis ---- */
+.grade-imoveis {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--esp-3);
+}
+.cartao-imovel header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--esp-2);
+}
+.cartao-imovel h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+.selo {
+  flex: 0 0 auto;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--gp-fundo);
+  color: var(--gp-azul-1);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.cartao-imovel dl {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--esp-2);
+  margin: var(--esp-3) 0;
+}
+.cartao-imovel dt {
+  font-size: 0.72rem;
+  color: var(--gp-texto-suave);
+}
+.cartao-imovel dd {
+  margin: 0;
+  font-weight: 600;
+}
+.imovel-numeros {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--esp-2);
+  padding-top: var(--esp-2);
+  border-top: 1px solid var(--gp-borda);
+}
+.imovel-numeros span {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--gp-texto-suave);
+}
+.imovel-numeros strong {
+  font-size: 0.92rem;
+}
+
+/* ---- Detalhamento ---- */
+.filtros-detalhe {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: var(--esp-2) var(--esp-3);
+  margin: var(--esp-3) 0;
+}
+.filtros-detalhe .busca {
+  grid-column: 1 / -1;
+}
+.barra-detalhe {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--esp-2);
+}
+.contagem {
+  margin: 0;
+  font-size: 0.88rem;
+}
+.tabela-virtual {
+  height: 560px;
+  overflow: auto;
+  margin-top: var(--esp-2);
+  border: 1px solid var(--gp-borda);
+  border-radius: 10px;
+}
+.tabela-virtual thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--gp-branco);
+  white-space: nowrap;
+}
+.tabela-virtual th button {
+  border: 0;
+  padding: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+  text-decoration: underline dotted;
+}
+/* Altura FIXA da linha: a rolagem virtual (detalhamento.ts, ALTURA_LINHA) depende dela. */
+.tabela-virtual tbody tr:not(.espaco) td {
+  height: 40px;
+  box-sizing: border-box;
+  padding: 0 10px;
+  vertical-align: middle;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 260px;
+}
+.tabela-virtual tr.espaco td {
+  padding: 0;
+  border: 0;
+}
+.tabela-virtual td.vazio {
+  text-align: center;
+  color: var(--gp-texto-suave);
+}
+
+@media (max-width: 720px) {
+  .modulos {
+    width: 100%;
+  }
+  .modulos button {
+    flex: 1;
+  }
+  .duas-colunas {
+    grid-template-columns: 1fr;
+  }
+  .indicador-saude {
+    margin-left: 0;
+  }
+  .tabela-virtual {
+    height: 70vh;
+  }
+}
+
+/* ---- Ajustes após conferência visual ---- */
+[hidden] {
+  display: none !important;
+}
+.kpi-painel-valor {
+  font-size: 1.2rem;
+  white-space: nowrap;
+}
+.cartao-imovel header {
+  flex-direction: column;
+}
+.imovel-numeros {
+  grid-template-columns: 1fr;
+  gap: 4px;
+}
+.imovel-numeros div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.imovel-numeros span {
+  display: inline;
+}
+.imovel-numeros strong {
+  white-space: nowrap;
+}
+details > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-2);
+  cursor: pointer;
+  list-style: none;
+}
+details > summary::-webkit-details-marker {
+  display: none;
+}
+details > summary::before {
+  content: '▸';
+  color: var(--gp-azul-1);
+  transition: transform var(--transicao);
+}
+details[open] > summary::before {
+  transform: rotate(90deg);
+}
+details > summary h3 {
+  margin: 0;
+}
+.filtros-detalhe input[type='search'] {
+  flex: none;
+}
+.tabela-virtual tbody tr:not(.espaco) td {
+  max-width: 220px;
+}
+.tabela-virtual tbody tr:not(.espaco) td.num {
+  max-width: none;
+  overflow: visible;
+}
