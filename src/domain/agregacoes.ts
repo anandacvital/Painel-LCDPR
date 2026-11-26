@@ -72,9 +72,13 @@ export interface TotalMensal extends Totais {
 /** Os 12 meses do ano-base, inclusive os sem movimento (para gráficos sem "buracos"). */
 export function porMes(arquivo: ArquivoLcdpr): TotalMensal[] {
   const ano = arquivo.anoBase ?? arquivo.lancamentos[0]?.data.ano;
-  if (!ano) return [];
+  return ano ? mensal(arquivo.lancamentos, ano) : [];
+}
+
+/** Mesma coisa que porMes, a partir de qualquer lista de lançamentos (ex.: consolidado). */
+export function mensal(lancamentos: readonly Lancamento[], ano: number): TotalMensal[] {
   const grupos = new Map<string, Lancamento[]>();
-  for (const l of arquivo.lancamentos) {
+  for (const l of lancamentos) {
     const chave = l.data.iso.slice(0, 7);
     const g = grupos.get(chave);
     if (g) g.push(l);
@@ -97,8 +101,8 @@ export interface TotalPorChave extends Totais {
 }
 
 /** Agrupa e totaliza por qualquer critério (imóvel, conta, participante...), maior movimento primeiro. */
-export function agruparPor(lancamentos: readonly Lancamento[], chaveDe: (l: Lancamento) => string): TotalPorChave[] {
-  const grupos = new Map<string, Lancamento[]>();
+export function agruparPor<L extends Lancamento>(lancamentos: readonly L[], chaveDe: (l: L) => string): TotalPorChave[] {
+  const grupos = new Map<string, L[]>();
   for (const l of lancamentos) {
     const k = chaveDe(l);
     const g = grupos.get(k);

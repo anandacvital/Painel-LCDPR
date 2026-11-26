@@ -20,7 +20,9 @@ const SEVERIDADE: Record<Ocorrencia['severidade'], string> = {
 export function celulaCsv(valor: string | number | null): string {
   if (valor === null) return '';
   let s = String(valor);
-  if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
+  // Número puro (ex.: "-1234,56") não é fórmula: fica como está para o Excel somar.
+  const numeroPuro = /^-?\d+(,\d+)?$/.test(s);
+  if (!numeroPuro && /^[=+\-@\t\r]/.test(s)) s = `'${s}`;
   if (/[;"\r\n]/.test(s)) s = `"${s.replace(/"/g, '""')}"`;
   return s;
 }

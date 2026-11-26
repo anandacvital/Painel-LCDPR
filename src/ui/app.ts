@@ -4,8 +4,12 @@
  * Fluxo:
  * 1. a pessoa arrasta (ou escolhe) um ou mais TXT;
  * 2. cada arquivo vai para o Worker, que devolve a análise;
- * 3. a análise entra na lista de arquivos e a aba Saúde é exibida;
+ * 3. a análise entra na lista de arquivos;
  * 4. se "Manter neste computador" estiver ligado, a análise é salva no IndexedDB.
+ *
+ * Dois módulos, escolhidos no cabeçalho, usam os mesmos arquivos:
+ * - VALIDADOR (antes de transmitir): saúde do arquivo, erros e onde corrigir;
+ * - PAINEL DO LIVRO CAIXA (arquivos já transmitidos): visão gráfica para decisão.
  */
 import { formatarCpfCnpj } from '../domain/documentos';
 import type { ResultadoAnalise, Semaforo } from '../parser/modelo';
@@ -21,6 +25,9 @@ import {
 import { esc, numeroBR } from './html';
 import { iconeArquivo, iconeBroto, iconeCadeado, iconeFechar, iconeLixeira } from './icones';
 import { montarSaudeArquivo } from './saudeArquivo';
+import { montarPainel, novoEstadoPainel, type EstadoPainel } from './painel/modulo';
+
+type Modulo = 'validador' | 'painel';
 
 const ROTULO_SEMAFORO: Record<Semaforo, string> = {
   verde: 'Saudável',
@@ -32,6 +39,8 @@ interface Estado {
   analises: Map<string, ResultadoAnalise>;
   selecionada: string | null;
   manterDados: boolean;
+  modulo: Modulo;
+  painel: EstadoPainel;
 }
 
 /** Chave do arquivo: produtor + ano. Reenviar o mesmo produtor/ano substitui a análise anterior. */
@@ -41,11 +50,21 @@ function chaveDe(r: ResultadoAnalise): string {
 }
 
 export function iniciarApp(raiz: HTMLElement): void {
-  const estado: Estado = { analises: new Map(), selecionada: null, manterDados: preferenciaManterDados() };
+  const estado: Estado = {
+    analises: new Map(),
+    selecionada: null,
+    manterDados: preferenciaManterDados(),
+    modulo: 'validador',
+    painel: novoEstadoPainel(),
+  };
 
   raiz.innerHTML = `
     <header class="cabecalho">
       <h1>Painel LCDPR <span class="marca">· Grupo Paraná</span></h1>
+      <nav class="modulos" aria-label="Módulos">
+        <button type="button" data-modulo="validador" aria-pressed="true">Validador<small>antes de transmitir</small></button>
+        <button type="button" data-modulo="painel" aria-pressed="false">Painel do Livro Caixa<small>arquivos transmitidos</small></button>
+      </nav>
       <span id="semaforo-topo" class="semaforo" hidden></span>
       <button type="button" class="botao-perigo" id="apagar-tudo">${iconeLixeira}Apagar dados deste computador</button>
     </header>
@@ -70,8 +89,11 @@ export function iniciarApp(raiz: HTMLElement): void {
         </label>
         <p id="status" class="status" role="status" aria-live="polite"></p>
       </section>
-      <section id="lista-arquivos" class="lista-arquivos" aria-label="Arquivos analisados"></section>
-      <section id="aba-saude" class="aba"></section>
+      <div id="modulo-validador">
+        <section id="lista-arquivos" class="lista-arquivos" aria-label="Arquivos analisados"></section>
+        <section id="aba-saude" class="aba"></section>
+      </div>
+      <div id="modulo-painel" class="aba" hidden></div>
     </main>
   `;
 
@@ -82,9 +104,22 @@ export function iniciarApp(raiz: HTMLElement): void {
   const area = raiz.querySelector<HTMLLabelElement>('#area-arquivo')!;
   const entrada = raiz.querySelector<HTMLInputElement>('#entrada-arquivo')!;
   const manter = raiz.querySelector<HTMLInputElement>('#manter-dados')!;
+  const moduloValidador = raiz.querySelector<HTMLElement>('#modulo-validador')!;
+  const moduloPainel = raiz.querySelector<HTMLElement>('#modulo-painel')!;
 
   // ---- Desenho -------------------------------------------------------------------
   const desenhar = (): void => {
+    const noPainel = estado.modulo === 'painel';
+    moduloValidador.hidden = noPainel;
+    moduloPainel.hidden = !noPainel;
+    raiz.querySelectorAll<HTMLButtonElement>('button[data-modulo]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.modulo === estado.modulo)));
+    if (noPainel) {
+      semaforoTopo.hidden = true;
+      montarPainel(moduloPainel, [...estado.analises.values()], estado.painel, () => irPara('validador'));
+      return;
+    }
+    moduloPainel.innerHTML = '';
+
     const itens = [...estado.analises.entries()].sort(([, a], [, b]) =>
       (a.arquivo.abertura?.nome ?? '').localeCompare(b.arquivo.abertura?.nome ?? '') ||
       (a.arquivo.anoBase ?? 0) - (b.arquivo.anoBase ?? 0),
@@ -119,6 +154,15 @@ export function iniciarApp(raiz: HTMLElement): void {
       aba.innerHTML = '';
     }
   };
+
+  const irPara = (m: Modulo): void => {
+    estado.modulo = m;
+    desenhar();
+    window.scrollTo({ top: 0 });
+  };
+  raiz.querySelectorAll<HTMLButtonElement>('button[data-modulo]').forEach((b) => {
+    b.addEventListener('click', () => irPara(b.dataset.modulo as Modulo));
+  });
 
   // ---- Arquivos ------------------------------------------------------------------
   const processar = async (arquivos: FileList | null): Promise<void> => {
