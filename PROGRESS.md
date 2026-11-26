@@ -50,8 +50,25 @@ _Última atualização: 26/11/2026 (Fase 2)_
   destaques, gráfico mensal, tabela mês a mês, imóveis (gráfico e tabela), 5 maiores clientes e fornecedores.
 - 90 testes passando.
 
+### Relatórios detalhados (branch `fase-5-razoes`)
+- Menu "Imprimir relatórios" no Painel: Relatório executivo, Livro Caixa completo (por data, saldo linha a
+  linha, totais mensais), Razão por imóvel (subtotais), Razão por conta bancária (saldo calculado por conta,
+  para conciliar com o extrato) e Razão por participante (total e %). Em A4 paisagem (`report/razoes.ts`).
+- Detalhamento: botão "Imprimir (filtro atual)" com os filtros descritos no cabeçalho.
+
+### LCDPR de exemplo: segundo produtor e prévia de 2026 (mesma branch)
+- Produtor 2 (CONDOMINO EXEMPLO FICTICIO): pecuária de corte + 40% da Santa Cruz espelhando os lançamentos
+  do produtor 1 (mesma data, documento e participante, valor 40/60). 2024 com prejuízo, 2025 com lucro.
+  O painel diagnostica "parcela" (somar é o correto).
+- Prévia de 2026 do produtor 1 até 31/10/2026 (`ateMes` no gerador).
+- Validador: arquivo que termina antes de 31/12 sem situação especial gera o alerta `PREVIA` (não transmitir).
+- Painel: ano marcado "(prévia)", aviso na Visão Executiva e no relatório executivo, variações contra o
+  MESMO PERÍODO do ano anterior, meses param no último mês do arquivo. Em "todos os produtores", o ano
+  anterior só considera os produtores que têm arquivo no ano atual.
+- Parâmetros em `scripts/exemplos.ts`; `npm run fixtures` regera tudo. 110 testes passando.
+
 ## Em andamento
-- PR dos relatórios para impressão.
+- PR dos relatórios detalhados + exemplos.
 
 ## Pendências / dúvidas para a Ananda
 - Cópia do TXT real ainda na biblioteca de arquivos do projeto (aguardando "pode apagar").

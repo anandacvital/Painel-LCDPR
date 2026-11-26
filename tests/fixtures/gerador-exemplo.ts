@@ -37,10 +37,15 @@ export interface OpcoesExemplo {
   /** Multiplica todas as despesas (custo dos insumos no ano). */
   fatorDespesa: number;
   semente: number;
+  /**
+   * Gera uma PRÉVIA do ano em andamento: só os lançamentos até este mês, com
+   * DT_FIN no último dia dele. Omitido = ano inteiro (até 31/12).
+   */
+  ateMes?: number;
 }
 
 /** Gerador pseudoaleatório "mulberry32": a mesma semente gera o mesmo arquivo. */
-function criarAleatorio(semente: number): () => number {
+export function criarAleatorio(semente: number): () => number {
   let s = semente >>> 0;
   return () => {
     s = (s + 0x6d2b79f5) >>> 0;
@@ -51,9 +56,9 @@ function criarAleatorio(semente: number): () => number {
   };
 }
 
-const pad = (n: number, tam: number): string => String(n).padStart(tam, '0');
+export const pad = (n: number, tam: number): string => String(n).padStart(tam, '0');
 
-interface Evento {
+export interface Evento {
   mes: number;
   dia: number;
   imovel: string;
@@ -65,6 +70,85 @@ interface Evento {
   tipo: 1 | 2;
   /** Centavos. */
   valor: number;
+  /** Número do documento já definido (lançamento espelhado de outro arquivo). */
+  numDoc?: string;
+}
+
+/** Dados de cabeçalho e cadastro do arquivo (registros 0000 a 0050). */
+export interface CadastroExemplo {
+  ano: number;
+  cpf: string;
+  nome: string;
+  contador: string;
+  /** Linhas 0040/0045/0050 já montadas (sem o "|" final). */
+  cadastros: string[];
+  /** Primeiro número de documento da sequência própria do produtor. */
+  docInicial: number;
+  /** Prévia: último mês com lançamentos (DT_FIN = último dia dele). */
+  ateMes?: number;
+}
+
+/** Empurra cada data para o próximo dia útil (sem fim de semana nem feriado nacional). */
+export function ajustarDiasUteis(eventos: Evento[], ano: number): void {
+  for (const e of eventos) {
+    let d = criarData(ano, e.mes, e.dia);
+    while (diaNaoUtil(d)) {
+      const prox = new Date(Date.UTC(d.ano, d.mes - 1, d.dia + 1));
+      d = criarData(prox.getUTCFullYear(), prox.getUTCMonth() + 1, prox.getUTCDate());
+    }
+    e.mes = d.mes;
+    e.dia = d.dia;
+  }
+}
+
+/**
+ * Monta o TXT: abertura, cadastros, Q100 em ordem cronológica (com saldo linha a
+ * linha), Q200 mensal e 9999. Os eventos precisam estar em dias úteis.
+ */
+export function montarTxt(c: CadastroExemplo, eventos: Evento[]): { texto: string; linhas: string[] } {
+  // Ordem cronológica; no mesmo dia, receita antes de despesa.
+  eventos.sort((a, b) => a.mes - b.mes || a.dia - b.dia || a.tipo - b.tipo);
+  const ateMes = c.ateMes ?? 12;
+  if (ateMes < 12) eventos.splice(0, eventos.length, ...eventos.filter((e) => e.mes <= ateMes));
+  // Último dia do mês final (dia 0 do mês seguinte).
+  const ultimoDia = new Date(Date.UTC(c.ano, ateMes, 0)).getUTCDate();
+  const linhas: string[] = [];
+  const L = (...campos: (string | number)[]): void => {
+    linhas.push(campos.join('|'));
+  };
+
+  L('0000', 'LCDPR', '0013', c.cpf, c.nome, 0, 0, '', `0101${c.ano}`, `${pad(ultimoDia, 2)}${pad(ateMes, 2)}${c.ano}`);
+  L('0010', 1);
+  L('0030', 'RUA DOS EXEMPLOS FICTICIOS', '250', '', 'CENTRO', 'MS', '5002704', '79002000', '6799990000', 'exemplo@exemplo.invalid');
+  linhas.push(...c.cadastros);
+
+  let saldo = 0;
+  let doc = c.docInicial;
+  const resumo = new Map<number, { ent: number; sai: number; saldo: number }>();
+  for (const e of eventos) {
+    const entrada = e.tipo === 1 ? e.valor : 0;
+    const saida = e.tipo === 2 ? e.valor : 0;
+    saldo += entrada - saida;
+    let numDoc = e.numDoc;
+    if (numDoc === undefined) {
+      doc++;
+      numDoc = e.tipoDoc === 5 ? `FP${pad(e.mes, 2)}${c.ano}${doc}` : String(doc);
+    }
+    L('Q100', `${pad(e.dia, 2)}${pad(e.mes, 2)}${c.ano}`, e.imovel, e.conta, numDoc, e.tipoDoc, e.historico, e.partic, e.tipo, entrada, saida, Math.abs(saldo), saldo < 0 ? 'N' : 'P');
+    const r = resumo.get(e.mes) ?? { ent: 0, sai: 0, saldo: 0 };
+    r.ent += entrada;
+    r.sai += saida;
+    r.saldo = saldo;
+    resumo.set(e.mes, r);
+  }
+  for (let mes = 1; mes <= 12; mes++) {
+    const r = resumo.get(mes);
+    if (!r) continue;
+    L('Q200', `${pad(mes, 2)}${c.ano}`, r.ent, r.sai, Math.abs(r.saldo), r.saldo < 0 ? 'N' : 'P');
+  }
+  // QTD_LIN conta todas as linhas, inclusive o próprio 9999 (P&R LCDPR, pergunta 12).
+  L('9999', 'CONTADOR EXEMPLO FICTICIO', c.contador, 'MS000000O0', 'contador@exemplo.invalid', '6799990001', linhas.length + 1);
+  return { texto: `${linhas.join('\r\n')}\r\n`, linhas };
 }
 
 export function gerarExemplo(o: OpcoesExemplo): { texto: string; linhas: string[] } {
@@ -164,59 +248,24 @@ export function gerarExemplo(o: OpcoesExemplo): { texto: string; linhas: string[
   despesa(5, 19, '002', 'Vacinas e medicamentos veterinarios - campanha de maio', f.veterinaria[0]!, entre(9_000, 13_000));
   despesa(11, 10, '002', 'Vacinas e medicamentos veterinarios - campanha de novembro', f.veterinaria[0]!, entre(9_000, 13_000));
 
-  // ---------------- AJUSTES DE CALENDÁRIO ----------------
-  // Empurra cada data para o próximo dia útil (sem fim de semana nem feriado nacional).
-  for (const e of eventos) {
-    let d = criarData(o.ano, e.mes, e.dia);
-    while (diaNaoUtil(d)) {
-      const prox = new Date(Date.UTC(d.ano, d.mes - 1, d.dia + 1));
-      d = criarData(prox.getUTCFullYear(), prox.getUTCMonth() + 1, prox.getUTCDate());
-    }
-    e.mes = d.mes;
-    e.dia = d.dia;
-  }
-  // Ordem cronológica; no mesmo dia, receita antes de despesa.
-  eventos.sort((a, b) => a.mes - b.mes || a.dia - b.dia || a.tipo - b.tipo);
-
-  // ---------------- MONTAGEM DO TXT ----------------
-  const linhas: string[] = [];
-  const L = (...campos: (string | number)[]): void => {
-    linhas.push(campos.join('|'));
-  };
-
-  L('0000', 'LCDPR', '0013', produtor, 'PRODUTOR EXEMPLO FICTICIO', 0, 0, '', `0101${o.ano}`, `3112${o.ano}`);
-  L('0010', 1);
-  L('0030', 'RUA DOS EXEMPLOS FICTICIOS', '250', '', 'CENTRO', 'MS', '5002704', '79002000', '6799990000', 'exemplo@exemplo.invalid');
-  L('0040', '001', 'BR', 'BRL', '11111118', '', '', 'FAZENDA EXEMPLO BOA VISTA', 'RODOVIA FICTICIA MS-000 KM 42', '', '', 'ZONA RURAL', 'MS', '5002704', '79100000', 1, '10000');
-  L('0040', '002', 'BR', 'BRL', '22222226', '', '', 'SITIO EXEMPLO AGUA LIMPA', 'ESTRADA VICINAL FICTICIA KM 8', '', '', 'ZONA RURAL', 'MS', '5002704', '79100000', 1, '10000');
-  L('0040', '003', 'BR', 'BRL', '33333334', '', '', 'FAZENDA EXEMPLO SANTA CRUZ', 'ESTRADA FICTICIA DO CONDOMINIO KM 15', '', '', 'ZONA RURAL', 'MS', '5002704', '79100000', 2, '06000');
-  L('0045', '003', 1, condomino, 'CONDOMINO EXEMPLO FICTICIO', '04000');
-  L('0050', '001', 'BR', '001', 'BANCO EXEMPLO UM', '1111', '0000000000011111');
-  L('0050', '002', 'BR', '756', 'COOPERATIVA DE CREDITO EXEMPLO', '2222', '0000000000022222');
-
-  let saldo = 0;
-  let doc = 5000;
-  const resumo = new Map<number, { ent: number; sai: number; saldo: number }>();
-  for (const e of eventos) {
-    const entrada = e.tipo === 1 ? e.valor : 0;
-    const saida = e.tipo === 2 ? e.valor : 0;
-    saldo += entrada - saida;
-    doc++;
-    const numDoc = e.tipoDoc === 5 ? `FP${pad(e.mes, 2)}${o.ano}${doc}` : String(doc);
-    L('Q100', `${pad(e.dia, 2)}${pad(e.mes, 2)}${o.ano}`, e.imovel, e.conta, numDoc, e.tipoDoc, e.historico, e.partic, e.tipo, entrada, saida, Math.abs(saldo), saldo < 0 ? 'N' : 'P');
-    const r = resumo.get(e.mes) ?? { ent: 0, sai: 0, saldo: 0 };
-    r.ent += entrada;
-    r.sai += saida;
-    r.saldo = saldo;
-    resumo.set(e.mes, r);
-  }
-  for (let mes = 1; mes <= 12; mes++) {
-    const r = resumo.get(mes);
-    if (!r) continue;
-    L('Q200', `${pad(mes, 2)}${o.ano}`, r.ent, r.sai, Math.abs(r.saldo), r.saldo < 0 ? 'N' : 'P');
-  }
-  // QTD_LIN conta todas as linhas, inclusive o próprio 9999 (P&R LCDPR, pergunta 12).
-  L('9999', 'CONTADOR EXEMPLO FICTICIO', contador, 'MS000000O0', 'contador@exemplo.invalid', '6799990001', linhas.length + 1);
-
-  return { texto: `${linhas.join('\r\n')}\r\n`, linhas };
+  ajustarDiasUteis(eventos, o.ano);
+  return montarTxt(
+    {
+      ano: o.ano,
+      cpf: produtor,
+      nome: 'PRODUTOR EXEMPLO FICTICIO',
+      contador,
+      docInicial: 5000,
+      ...(o.ateMes ? { ateMes: o.ateMes } : {}),
+      cadastros: [
+        `0040|001|BR|BRL|11111118|||FAZENDA EXEMPLO BOA VISTA|RODOVIA FICTICIA MS-000 KM 42|||ZONA RURAL|MS|5002704|79100000|1|10000`,
+        `0040|002|BR|BRL|22222226|||SITIO EXEMPLO AGUA LIMPA|ESTRADA VICINAL FICTICIA KM 8|||ZONA RURAL|MS|5002704|79100000|1|10000`,
+        `0040|003|BR|BRL|33333334|||FAZENDA EXEMPLO SANTA CRUZ|ESTRADA FICTICIA DO CONDOMINIO KM 15|||ZONA RURAL|MS|5002704|79100000|2|06000`,
+        `0045|003|1|${condomino}|CONDOMINO EXEMPLO FICTICIO|04000`,
+        `0050|001|BR|001|BANCO EXEMPLO UM|1111|0000000000011111`,
+        `0050|002|BR|756|COOPERATIVA DE CREDITO EXEMPLO|2222|0000000000022222`,
+      ],
+    },
+    eventos,
+  );
 }

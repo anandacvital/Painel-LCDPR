@@ -74,13 +74,13 @@ export function tituloImoveis(grupos: readonly (TotalPorChave & { nome?: string 
  * 2. o mês mais forte e o mais fraco;
  * 3. o risco ou oportunidade mais relevante (caixa negativo, receita concentrada, tipo 3).
  */
-export function destaquesExecutivos(totais: Totais, meses: readonly TotalMensal[], anterior?: Totais | null): string[] {
+export function destaquesExecutivos(totais: Totais, meses: readonly TotalMensal[], anterior?: Totais | null, vs = 'ano anterior'): string[] {
   const d: string[] = [];
 
   const v = variacao(totais.resultado, anterior?.resultado);
   const margem = totais.margem !== null ? `, margem de ${pct(totais.margem)}` : '';
   if (v !== null) {
-    d.push(`Resultado de ${formatarReais(totais.resultado)}${margem}: ${v >= 0 ? 'alta' : 'queda'} de ${pct(Math.abs(v))} frente ao ano anterior.`);
+    d.push(`Resultado de ${formatarReais(totais.resultado)}${margem}: ${v >= 0 ? 'alta' : 'queda'} de ${pct(Math.abs(v))} frente ao ${vs}.`);
   } else {
     d.push(`Resultado de ${formatarReais(totais.resultado)}${margem}.`);
   }

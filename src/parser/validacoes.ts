@@ -97,10 +97,13 @@ function validarIntegridade(a: ArquivoLcdpr, add: Add): void {
         });
       }
       if (ab.sitEspecial === '0' && !(ab.dtFin.mes === 12 && ab.dtFin.dia === 31)) {
+        // Sem situação especial, um período que termina antes de 31/12 é uma PRÉVIA
+        // (acompanhamento do ano em andamento): útil para planejar, mas não é o
+        // arquivo a transmitir, que precisa cobrir o ano-calendário inteiro.
         add({
-          severidade: 'alerta', categoria: 'Integridade', regra: 'PERIODO', linha: ab.linha, registro: '0000', campo: 'DT_FIN',
-          problema: `Sem situação especial, o período deveria terminar em 31/12, mas DT_FIN é ${formatarDataIso(ab.dtFin.iso)}.`,
-          comoCorrigir: 'Corrija a data final ou informe a situação especial (falecimento, espólio, saída do País).',
+          severidade: 'alerta', categoria: 'Integridade', regra: 'PREVIA', linha: ab.linha, registro: '0000', campo: 'DT_FIN',
+          problema: `Prévia: o arquivo vai até ${formatarDataIso(ab.dtFin.iso)}. Serve para acompanhar e planejar o ano, mas não deve ser transmitido assim: sem situação especial, o LCDPR cobre o ano inteiro (até 31/12).`,
+          comoCorrigir: `Para transmitir, gere o arquivo final com DT_FIN 31/12/${ab.dtFin.ano} e os lançamentos até dezembro. Se houve falecimento, espólio ou saída do País, informe a situação especial no 0000.`,
         });
       }
     }
