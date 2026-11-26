@@ -1,0 +1,288 @@
+/*
+ * RELATÓRIOS PARA IMPRESSÃO (A4, retrato).
+ * Na tela, a área de impressão fica fora da vista, mas com a largura útil de
+ * uma folha A4 (para os gráficos serem desenhados no tamanho do papel).
+ * Na impressão, só ela aparece.
+ */
+#area-impressao {
+  position: absolute;
+  left: -10000px;
+  top: 0;
+  width: 182mm;
+}
+#area-impressao:empty {
+  display: none;
+}
+
+.relatorio {
+  font-family: var(--fonte-texto);
+  font-size: 9.5pt;
+  line-height: 1.4;
+  color: #000;
+  background: #fff;
+}
+.relatorio .num {
+  font-family: var(--fonte-numero);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+.rel-cabecalho {
+  border-bottom: 2.5pt solid var(--gp-navy);
+  padding-bottom: 8pt;
+  margin-bottom: 12pt;
+}
+.rel-marca {
+  font-size: 8pt;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gp-azul-1);
+}
+.rel-cabecalho h1 {
+  margin: 2pt 0 8pt;
+  font-size: 17pt;
+  color: var(--gp-navy);
+}
+.rel-ident {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4pt 14pt;
+  margin: 0;
+}
+.rel-ident dt {
+  font-size: 7.5pt;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--gp-texto-suave);
+}
+.rel-ident dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.rel-bloco {
+  margin-bottom: 14pt;
+}
+.rel-bloco h2 {
+  margin: 0 0 6pt;
+  font-size: 12pt;
+  color: var(--gp-navy);
+}
+.rel-bloco h3 {
+  margin: 0 0 4pt;
+  font-size: 10pt;
+}
+.rel-conclusao.rel-vermelho {
+  color: var(--gp-alerta);
+}
+.rel-conclusao.rel-amarelo {
+  color: var(--gp-atencao);
+}
+.rel-conclusao.rel-verde {
+  color: var(--gp-agro);
+}
+
+.rel-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8pt;
+  margin: 6pt 0 8pt;
+}
+.rel-kpis-5 {
+  grid-template-columns: repeat(5, 1fr);
+}
+.rel-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 2pt;
+  padding: 6pt 8pt;
+  border: 0.75pt solid var(--gp-borda);
+  border-top: 3pt solid var(--gp-azul-2);
+  border-radius: 4pt;
+}
+.rel-kpi span {
+  font-size: 7.5pt;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--gp-texto-suave);
+}
+.rel-kpi strong {
+  font-family: var(--fonte-numero);
+  font-size: 11pt;
+  white-space: nowrap;
+}
+.rel-kpis:not(.rel-kpis-5) .rel-kpi strong {
+  font-size: 18pt;
+}
+.rel-kpi small {
+  font-size: 7.5pt;
+  color: var(--gp-texto-suave);
+}
+.rel-kpi-erro,
+.rel-kpi-despesa {
+  border-top-color: var(--gp-alerta);
+}
+.rel-kpi-alerta {
+  border-top-color: var(--gp-atencao);
+}
+.rel-kpi-receita {
+  border-top-color: var(--gp-agro);
+}
+.rel-kpi small.rel-boa {
+  color: var(--gp-agro);
+  font-weight: 600;
+}
+.rel-kpi small.rel-ruim {
+  color: var(--gp-alerta);
+  font-weight: 600;
+}
+.rel-neg {
+  color: var(--gp-alerta);
+}
+.rel-nota,
+.rel-legenda {
+  margin: 0 0 4pt;
+  font-size: 7.5pt;
+  color: var(--gp-texto-suave);
+}
+.rel-avisos {
+  margin-top: 6pt;
+  padding: 6pt 8pt;
+  border-left: 3pt solid var(--gp-atencao);
+  background: var(--gp-atencao-fundo);
+}
+.rel-avisos ul {
+  margin: 2pt 0 0;
+  padding-left: 12pt;
+}
+.rel-destaques {
+  margin: 0;
+  padding-left: 14pt;
+}
+.rel-destaques li + li {
+  margin-top: 3pt;
+}
+.rel-ok {
+  padding: 8pt;
+  border-left: 3pt solid var(--gp-agro);
+  background: var(--gp-agro-fundo);
+}
+.rel-grafico {
+  width: 100%;
+}
+.rel-duas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12pt;
+}
+
+.rel-tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 8.5pt;
+}
+.rel-tabela th,
+.rel-tabela td {
+  padding: 3pt 5pt;
+  border-bottom: 0.5pt solid var(--gp-borda);
+  text-align: left;
+  vertical-align: top;
+}
+.rel-tabela thead th {
+  font-size: 7.5pt;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--gp-texto-suave);
+  border-bottom: 1pt solid var(--gp-navy);
+}
+.rel-tabela tfoot th {
+  border-top: 1pt solid var(--gp-navy);
+}
+.rel-tabela th.num,
+.rel-tabela td.num {
+  text-align: right;
+}
+.rel-tabela-ident th {
+  width: 22%;
+  font-weight: 600;
+  color: var(--gp-texto-suave);
+}
+.rel-compacta td,
+.rel-compacta th {
+  padding: 2pt 5pt;
+}
+.rel-ocorrencias td:nth-child(4),
+.rel-ocorrencias td:nth-child(5) {
+  width: 36%;
+}
+.rel-tabela small {
+  color: var(--gp-texto-suave);
+}
+.rel-sev {
+  font-weight: 700;
+  white-space: nowrap;
+}
+.rel-sev-erro {
+  color: var(--gp-alerta);
+}
+.rel-sev-alerta {
+  color: var(--gp-atencao);
+}
+.rel-sev-info {
+  color: var(--gp-azul-1);
+}
+.rel-rodape {
+  margin-top: 16pt;
+  padding-top: 6pt;
+  border-top: 0.5pt solid var(--gp-borda);
+  font-size: 7.5pt;
+  color: var(--gp-texto-suave);
+}
+
+/* ---- Botão de impressão ---- */
+.botao-imprimir {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--esp-2);
+}
+
+@page {
+  size: A4 portrait;
+  margin: 14mm 14mm 16mm;
+  @bottom-right {
+    content: 'Página ' counter(page) ' de ' counter(pages);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 8pt;
+    color: #4a5a73;
+  }
+}
+
+@media print {
+  html,
+  body {
+    background: #fff !important;
+  }
+  body > *:not(#area-impressao) {
+    display: none !important;
+  }
+  #area-impressao {
+    position: static;
+    width: auto;
+  }
+  .relatorio {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .rel-tabela thead {
+    display: table-header-group; /* repete o cabeçalho da tabela em cada página */
+  }
+  .rel-tabela tr,
+  .rel-kpi,
+  .rel-sem-quebra {
+    break-inside: avoid;
+  }
+  .rel-bloco h2 {
+    break-after: avoid;
+  }
+}

@@ -13,5 +13,6 @@ export const iconeAlerta = svg('<path d="M12 3l9.5 17h-19z"/><path d="M12 10v4M1
 export const iconeInfo = svg('<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.01"/>');
 export const iconeOk = svg('<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/>');
 export const iconeDownload = svg('<path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M5 20h14"/>');
+export const iconeImpressora = svg('<path d="M7 9V3h10v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v7H7z"/>');
 export const iconeArquivo = svg('<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M9 13h6M9 17h6"/>');
 export const iconeFechar = svg('<path d="M6 6l12 12M18 6L6 18"/>');

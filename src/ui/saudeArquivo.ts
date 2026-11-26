@@ -14,11 +14,11 @@ import { FORMA_APUR } from '../parser/leiaute';
 import type { Categoria, Ocorrencia, ResultadoAnalise, Severidade } from '../parser/modelo';
 import { csvOcorrencias } from '../report/csv';
 import { baixarArquivo, esc, numeroBR } from './html';
-import { iconeAlerta, iconeDownload, iconeErro, iconeInfo, iconeOk } from './icones';
+import { iconeAlerta, iconeDownload, iconeErro, iconeImpressora, iconeInfo, iconeOk } from './icones';
 
 const POR_PAGINA = 50;
 
-const ROTULO: Record<Severidade, string> = { erro: 'Erro', alerta: 'Alerta', info: 'Informação' };
+export const ROTULO: Record<Severidade, string> = { erro: 'Erro', alerta: 'Alerta', info: 'Informação' };
 const ICONE: Record<Severidade, string> = { erro: iconeErro, alerta: iconeAlerta, info: iconeInfo };
 const CATEGORIAS: readonly Categoria[] = ['Estrutura', 'Campo', 'Integridade', 'Conciliação', 'Risco'];
 
@@ -75,7 +75,7 @@ interface GrupoRegra {
   exemplo: string;
 }
 
-function agruparPorRegra(lista: readonly Ocorrencia[]): GrupoRegra[] {
+export function agruparPorRegra(lista: readonly Ocorrencia[]): GrupoRegra[] {
   const grupos = new Map<string, GrupoRegra>();
   for (const o of lista) {
     const chave = `${o.severidade}|${o.regra}`;
@@ -95,8 +95,11 @@ export function montarSaudeArquivo(raiz: HTMLElement, r: ResultadoAnalise): void
 
   raiz.innerHTML = `
     <div class="cabecalho-aba">
-      <h2 class="titulo-conclusao">${esc(conclusaoSaude(r))}</h2>
-      <p class="subtitulo">${esc(a.nomeArquivo)}</p>
+      <div>
+        <h2 class="titulo-conclusao">${esc(conclusaoSaude(r))}</h2>
+        <p class="subtitulo">${esc(a.nomeArquivo)}</p>
+      </div>
+      <button type="button" class="botao-sec botao-imprimir" data-imprimir="validador">${iconeImpressora}Imprimir / salvar PDF</button>
     </div>
 
     <div class="grade-kpi">

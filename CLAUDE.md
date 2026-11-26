@@ -48,7 +48,7 @@ desenvolvedora): explicar decisões em linguagem simples e comentar o código.
 | `src/parser/` | leitura do TXT, encoding, tabela de registros, validações |
 | `src/domain/` | cálculos e regras (sem dependência de tela) |
 | `src/ui/` | `app.ts` (módulos Validador e Painel), `saudeArquivo.ts`, `painel/` (abas do Painel), `graficos/` (ECharts) |
-| `src/report/` | PDF |
+| `src/report/` | CSV e relatórios para impressão/PDF (`impressao.ts`) |
 | `src/workers/` | Web Worker do parser |
 | `src/styles/` | `tokens.css` (paleta e fontes) e `base.css` |
 | `tests/` | testes; `tests/fixtures/` só sintéticos |
@@ -144,3 +144,5 @@ LCDPR, perguntas 47 e 52; Lei nº 8.023/1990, art. 13). Por isso o critério pad
   "Visão" (`ui/painel/contexto.ts`) para todas as abas. Margem compara em pontos percentuais.
   CSV mantém número negativo puro como número (não é fórmula). LCDPR de exemplo em `tests/fixtures/exemplo-lcdpr-*.txt`.
 - 26/11/2026: a pedido da Ananda, despesas em vermelho e receitas em verde em todos os gráficos do Painel.
+- 26/11/2026: Ananda pediu os relatórios impressos antes do IRPF (Fase 5 antecipada). Impressão/PDF pelo
+  navegador (window.print + CSS A4), sem biblioteca de PDF: nada sai do computador. Fase 4 (IRPF) vem depois.

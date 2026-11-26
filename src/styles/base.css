@@ -350,6 +350,13 @@ main,
 }
 
 /* ---- Aba Saúde ---- */
+.cabecalho-aba {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--esp-3);
+}
 .cabecalho-aba h2 {
   margin: 0;
   font-size: 1.6rem;
