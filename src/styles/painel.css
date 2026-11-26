@@ -1128,3 +1128,29 @@ details > summary h3 {
 .menu-imprimir-opcoes .ajuda {
   margin: 6px 12px 2px;
 }
+
+/* ---- Ficha Atividade Rural da DIRPF (dentro do cartão do produtor) ---- */
+.plano-botoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.plano-dirpf {
+  margin-top: 16px;
+  border-top: 1px solid var(--gp-borda);
+  padding-top: 12px;
+}
+.plano-dirpf summary {
+  cursor: pointer;
+}
+/* Pré-visualização "papel": as mesmas tabelas do relatório impresso. */
+.ficha-dirpf-tela {
+  margin: 12px 0;
+  padding: 12px 16px;
+  border: 1px solid var(--gp-borda);
+  border-radius: 8px;
+  overflow-x: auto;
+}
+.ficha-dirpf-tela h3 {
+  margin: 12px 0 6px;
+}

@@ -98,14 +98,25 @@ _Última atualização: 26/11/2026 (Fase 2)_
   Livro Caixa de um mês com saldo inicial e final (também no Detalhamento).
 - Corrigido: cascata do Fluxo de Caixa não desenhava os meses com caixa acumulado negativo. 146 testes.
 
+### DIRPF e novos avisos do Validador (branch `fase-7-dirpf-avisos`)
+- Ficha Atividade Rural da DIRPF por CPF (`domain/dirpf.ts`, `report/dirpf.ts`): imóveis do 0040 com a condição
+  de exploração da DIRPF (sugestão), receitas e despesas mês a mês, resultado, prejuízo anterior/compensado/a
+  compensar nas duas opções (real e 20%), receitas para conferir e avisos. Na aba Planejamento (recolhida, por
+  produtor) e no menu "Imprimir relatórios" (um produtor por página). Só o realizado; prévia avisada.
+- Validador: receita com histórico de arrendamento/aluguel, venda de terra nua ou de bem do imobilizado (alerta
+  com base legal); duplicidade por participante (mesma data, valor e participante, documento diferente);
+  valor redondo alto (info, a partir de R$ 10.000,00 múltiplo de R$ 1.000,00); despesa sem documento cita a
+  comprovação (IN SRF 83/2001, arts. 10 e 22). CPF/CNPJ inválido de participante já era erro. 175 testes.
+
 ## Em andamento
-- PR do painel interativo.
+- PR da ficha DIRPF e dos novos avisos.
 
 ## Pendências / dúvidas para a Ananda
 - Cópia do TXT real ainda na biblioteca de arquivos do projeto (aguardando "pode apagar").
 - Lei nº 9.250/1995, art. 18: texto não conferido (fonte indisponível).
 
 ## Próximos passos
+- Conferir os nomes dos campos da ficha com o programa IRPF do exercício (podem mudar a cada ano).
 - Área e produção (R$/ha, R$/saca): virão do sistema Vértice no futuro.
 - Cadastrar a tabela progressiva de cada novo ano em `TABELAS_ANUAIS` (`domain/irpf.ts`).
 - Tributação mínima de altas rendas (Lei 15.270/2025) não é calculada: só alertada.

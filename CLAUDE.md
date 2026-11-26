@@ -153,6 +153,17 @@ LCDPR, perguntas 47 e 52; Lei nº 8.023/1990, art. 13). Por isso o critério pad
   (um relatório, produtor em cada linha, nomes no cabeçalho) ou "separado" (um por produtor, nova página).
 - Área (ha) e produção (sacas) ficam para o futuro, integradas ao sistema Vértice (Ananda, 26/11/2026).
 
+## 8.3 Ficha DIRPF e avisos de receita (`src/domain/dirpf.ts`, `src/report/dirpf.ts`, `parser/validacoes.ts`)
+- Ficha Atividade Rural por CPF, só o REALIZADO (nunca projeção), com o mesmo prejuízo inicial do Planejamento.
+  Condição de exploração do 0040 → DIRPF: 1 Proprietário (conferir), 2 Condômino, 3 Arrendatário, 4 Parceiro,
+  5 Comodatário, 6 Outros. Área, rebanho, bens e dívidas não estão no LCDPR (avisado). Opção 20% zera o prejuízo.
+- Receita que pode não ser rural (palavras do histórico, `receitaNaoRural`): arrendamento/aluguel (IN SRF 83/2001,
+  art. 4º, V), venda de terra nua (art. 9º, § 2º: ganho de capital), venda de imobilizado (art. 5º, § 2º, III:
+  rural só se usado exclusivamente na atividade). "PARCERIA" no histórico não aponta arrendamento. ALERTA, não erro.
+- Duplicidade por participante (mesma data, valor e participante, documento diferente) = alerta;
+  valor redondo alto (≥ R$ 10.000,00 e múltiplo de R$ 1.000,00) = info.
+- RIR/2018: só a faixa "arts. 50 a 61" é citada; artigos específicos do RIR não foram conferidos no texto oficial.
+
 ## 9. Decisões registradas
 - 25/11/2026: valores em centavos inteiros; CSP sem conexão de rede no build;
   verificação de sigilo no CI; ECharts adiado para a Fase 3.
@@ -181,3 +192,5 @@ LCDPR, perguntas 47 e 52; Lei nº 8.023/1990, art. 13). Por isso o critério pad
   no ano seguinte); o "melhor cenário" é o de maior economia DEFINITIVA.
 - 26/11/2026: Painel interativo sem aba nova (pedido da Ananda): filtro cruzado, safra e período livre,
   indicadores de gestão, alertas no topo, relatórios coloridos, Livro Caixa de um mês e unificado/separado.
+- 26/11/2026: Ananda aprovou a ficha Atividade Rural da DIRPF e os avisos de receita não rural e de lançamentos
+  fora do padrão (Fase 7). A ficha fica na aba Planejamento e no menu de impressão, sem aba nova.
