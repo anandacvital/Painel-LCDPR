@@ -35,6 +35,12 @@ desenvolvedora): explicar decisões em linguagem simples e comentar o código.
 - Parsing em Web Worker. Persistência opcional em IndexedDB com botão "Limpar dados deste computador".
 - Publicação: GitHub Pages via GitHub Actions (`.github/workflows/deploy.yml`, só a partir da `main`).
 - Testes: Vitest em `tests/**/*.test.ts`.
+- Fluxo: arquivo → `workers/cliente.ts` → `workers/parser.worker.ts` → `parser/analisar.ts`
+  (`parser.ts` lê e confere campos pela tabela; `validacoes.ts` cruza registros) → `ui/app.ts`.
+- Persistência (`ui/armazenamento.ts`): DESLIGADA por padrão; só salva o resultado da análise
+  (nunca o TXT) se a pessoa marcar "Manter as análises neste computador". O botão
+  "Apagar dados deste computador" apaga o IndexedDB inteiro e a preferência.
+- Mesmo produtor (CPF) + mesmo ano-base enviado de novo substitui a análise anterior (com aviso).
 
 ### Pastas
 | Pasta | Conteúdo |
@@ -54,7 +60,10 @@ desenvolvedora): explicar decisões em linguagem simples e comentar o código.
 - Encoding: tentar UTF-8; se surgir "�", reler como ISO-8859-1 (`src/parser/encoding.ts`).
 - Ano-base vem do registro 0000 (data inicial), nunca do nome do arquivo.
 - Nomes de funções e variáveis em português, comentários explicando o "porquê".
-- Cores só via tokens CSS. Vermelho = alerta/negativo; verde = agro/receitas.
+- Cores só via tokens CSS. Vermelho = alerta/negativo; verde = agro/receitas;
+  âmbar `--gp-atencao` só para o nível amarelo do semáforo (fora da paleta institucional).
+- Todo texto vindo do TXT passa por `esc()` (`ui/html.ts`) antes de ir para a tela.
+- CSV: separador `;`, BOM UTF-8 e proteção contra fórmula (`report/csv.ts`).
 - Fontes: DM Sans (texto), DM Mono com `tabular-nums` (números).
 
 ## 6. Comandos
@@ -67,20 +76,33 @@ desenvolvedora): explicar decisões em linguagem simples e comentar o código.
 | `npm run sigilo` | confere que nenhum dado real está versionado |
 | `npm run verificar` | tudo acima + build (mesmo que o CI) |
 | `npm run build` | gera o site em `dist/` |
+| `npm run fixtures` | regera os TXT sintéticos de exemplo em `tests/fixtures/` |
 
-## 7. Leiaute LCDPR — observações (CONFIRMAR NO MANUAL antes de codificar)
-Fonte oficial: Manual de Orientação do LCDPR (RFB) e IN RFB nº 1.848/2018.
-Observado na estrutura de um arquivo real (sem dados copiados), em 25/11/2026:
-- Linha começa direto pelo código do registro (sem `|` inicial); quebra CRLF; ASCII.
-- Quantidade de campos por linha ao separar por `|`: 0000=10, 0010=2, 0030=10,
-  0040=17, 0045=6, 0050=7, Q100=13 (último vazio: linha termina com `|`), Q200=6, 9999=7.
-- Q100: data DDMMAAAA, código do imóvel e da conta com 3 dígitos, participante
-  com 11 (CPF) ou 14 (CNPJ) dígitos, tipo de lançamento 1/2/3, natureza do saldo P/N.
-- Q200: mês MMAAAA e natureza do saldo P/N.
-- 0040 com UF; 0045 com tipo de terceiro (1/2 observados) e CPF/CNPJ.
-- Valores com 2 decimais implícitos, podem vir com zeros à esquerda.
-Tudo acima é observação empírica: a Fase 1 deve conferir nome, ordem, tamanho e
-obrigatoriedade de cada campo no Manual vigente e citar a versão.
+## 7. Leiaute LCDPR (confirmado no Manual em 26/11/2026)
+Fonte: Manual de Preenchimento do LCDPR, leiaute 1.3 (ADE COPES nº 1/2020; IN RFB nº 1.848/2018),
+https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/declaracoes-e-demonstrativos/lcdpr-livro-caixa-digital-do-produtor-rural/manual-de-preenchimento-do-lcdpr-1-3
+- Tabela completa de campos em `src/parser/leiaute.ts` (fonte única: mudou o leiaute, muda só ali).
+- Linha começa pelo código do registro (sem `|` inicial) e o último campo não tem `|` depois. CRLF.
+  O leitor tolera `|` no início/fim com alerta.
+- Ordem: 0000, 0010, 0030, 0040/0045, 0050, Q100, Q200, 9999.
+- Códigos especiais no Q100: imóvel `000` = despesa comum de condomínio/parceria; conta `000` = espécie;
+  conta `999` = valor que não passou por conta.
+- 0045 obrigatório quando 0040.PARTICIPACAO < 100% ou TIPO_EXPLORACAO ≠ 1.
+- Saldo: começa em zero no ano; cada Q100 traz o saldo após o lançamento; Q200 traz saldo acumulado.
+
+### Pontos que o Manual NÃO define (premissas adotadas — validar com arquivo real)
+- **QTD_LIN do 9999**: assumimos que conta todas as linhas, inclusive o próprio 9999 (padrão SPED).
+- **TIPO_LANC 3** (adiantamento recebido em ano anterior): o Manual não diz se movimenta o saldo.
+  O painel calcula o saldo com a entrada; se o arquivo não a considerar, aponta ALERTA específico
+  (não erro) na linha. Confirmar com o sistema gerador (Domínio/Protheus).
+- Exemplos do Manual mostram espaços antes de valores no Q200; o painel aceita com alerta.
+
+### Critérios de risco (do painel, não da Receita; nunca são "erro")
+- Sem documento (NUM_DOC vazio), histórico genérico (lista em `validacoes.ts`), lançamento em
+  fim de semana/feriado nacional (`domain/datas.ts`, sem feriados estaduais/municipais),
+  valor atípico (Tukey sobre log do valor, Q3 + 2×IQR, mínimo 20 lançamentos do tipo),
+  concentração (> 50% das receitas ou despesas em um participante), duplicidade
+  (mesma data, valor e documento).
 
 ## 8. Consolidação de produtores (decisão pendente — Fase 2)
 Condôminos (0045) podem ter arquivos com a operação inteira ou só a parcela.
@@ -92,6 +114,8 @@ Documentar aqui a regra adotada.
   verificação de sigilo no CI; ECharts adiado para a Fase 3.
 - 25/11/2026: arquivo real enviado pela usuária usado só para conferir estrutura
   e apagado da máquina de trabalho; fixtures serão 100% sintéticas.
+- 26/11/2026: Fase 1 — persistência desligada por padrão; cor âmbar para o semáforo amarelo;
+  premissas de QTD_LIN e TIPO_LANC 3 registradas na seção 7.
 - 26/11/2026: repositório público + GitHub Pages gratuito (sem orçamento para plano pago).
   Consequência: qualquer arquivo versionado fica público na hora; a verificação de
   sigilo e o .gitignore são a barreira e não podem ser afrouxados.
