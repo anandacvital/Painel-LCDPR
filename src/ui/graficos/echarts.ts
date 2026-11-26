@@ -21,7 +21,10 @@ export const COR = {
   fundo: '#EBF3FB',
   receita: '#2D6A4F',
   negativo: '#C0001D',
-  despesa: '#1B4F9C',
+  /** Despesas em vermelho (pedido da Ananda, 26/11/2026): verde entra, vermelho sai. */
+  despesa: '#C0001D',
+  /** Vermelho claro: despesas com comprovação mais fraca (recibo, outros). */
+  despesaClara: '#E8909C',
   grade: '#D6E2F0',
   texto: '#0B2347',
   textoSuave: '#4A5A73',

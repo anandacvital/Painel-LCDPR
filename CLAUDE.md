@@ -60,7 +60,7 @@ desenvolvedora): explicar decisões em linguagem simples e comentar o código.
 - Encoding: tentar UTF-8; se surgir "�", reler como ISO-8859-1 (`src/parser/encoding.ts`).
 - Ano-base vem do registro 0000 (data inicial), nunca do nome do arquivo.
 - Nomes de funções e variáveis em português, comentários explicando o "porquê".
-- Cores só via tokens CSS. Vermelho = alerta/negativo; verde = agro/receitas;
+- Cores só via tokens CSS. Vermelho = alerta/negativo/despesas; verde = agro/receitas;
   âmbar `--gp-atencao` só para o nível amarelo do semáforo (fora da paleta institucional).
 - Todo texto vindo do TXT passa por `esc()` (`ui/html.ts`) antes de ir para a tela.
 - CSV: separador `;`, BOM UTF-8 e proteção contra fórmula (`report/csv.ts`).
@@ -143,3 +143,4 @@ LCDPR, perguntas 47 e 52; Lei nº 8.023/1990, art. 13). Por isso o critério pad
 - 26/11/2026: Fase 3 — Validador e Painel compartilham os arquivos carregados; o Painel usa uma única
   "Visão" (`ui/painel/contexto.ts`) para todas as abas. Margem compara em pontos percentuais.
   CSV mantém número negativo puro como número (não é fórmula). LCDPR de exemplo em `tests/fixtures/exemplo-lcdpr-*.txt`.
+- 26/11/2026: a pedido da Ananda, despesas em vermelho e receitas em verde em todos os gráficos do Painel.
