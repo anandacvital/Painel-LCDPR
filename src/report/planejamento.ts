@@ -8,6 +8,7 @@ import { formatarReais } from '../domain/dinheiro';
 import { formatarCpfCnpj } from '../domain/documentos';
 import { AVISO_ESTIMATIVA } from '../domain/irpf';
 import { CUIDADOS, melhorImposto, textoEquilibrio, type PlanoProdutor } from '../domain/planejamento';
+import { compararCenarios, melhorCenario, type Cenario } from '../domain/cenarios';
 import { esc } from '../ui/html';
 import type { Visao } from '../ui/painel/contexto';
 import { cabecalho, imprimir, RODAPE, slug } from './impressao';
@@ -18,6 +19,8 @@ export interface DadosSimulacao {
   anteciparDespesas: number;
   postergarReceitas: number;
   usarProjecao: boolean;
+  /** Cenários salvos (o relatório mostra os do produtor e ano de cada seção). */
+  cenarios?: readonly Cenario[];
 }
 
 const dataBR = (iso: string): string => iso.split('-').reverse().join('/');
@@ -47,6 +50,26 @@ function secaoProdutor(p: PlanoProdutor, sim: DadosSimulacao): string {
       (${s.variacaoImposto >= 0 ? 'economia' : 'aumento'} de ${formatarReais(Math.abs(s.variacaoImposto))}; melhor opção: ${esc(opcaoTexto(s.depois))}).</p>
     <ul class="rel-destaques">${s.cuidados.map((c) => `<li>${esc(c)}</li>`).join('')}</ul>` : '';
 
+  const meus = (sim.cenarios ?? []).filter((c) => c.cpf === p.cpf && c.ano === p.ano);
+  const linhas = meus.length ? compararCenarios(p.entrada, meus, p.caixaFimAno?.valor ?? null) : [];
+  const destaque = melhorCenario(linhas);
+  const td = (f: (l: (typeof linhas)[number]) => string): string => linhas.map((l) => `<td class="num">${f(l)}</td>`).join('');
+  const cenarios = linhas.length ? `
+    <h3>Cenários comparados</h3>
+    <table class="rel-tabela rel-compacta rel-sem-quebra">
+      <thead><tr><th></th>${linhas.map((l) => `<th class="num">${esc(l.nome)}${l.id && l.id === destaque ? ' ★' : ''}</th>`).join('')}</tr></thead>
+      <tbody>
+        <tr><td>Antecipar despesas</td>${td((l) => formatarReais(l.anteciparDespesas))}</tr>
+        <tr><td>Postergar receitas</td>${td((l) => formatarReais(l.postergarReceitas))}</tr>
+        <tr><td>Melhor opção</td>${td((l) => (l.opcao === 'presumido' ? '20% da receita' : l.opcao === 'empate' ? 'empate' : 'resultado real'))}</tr>
+        <tr><td>Imposto estimado</td>${td((l) => formatarReais(l.imposto))}</tr>
+        <tr><td>Economia definitiva</td>${td((l) => (l.id ? formatarReais(l.economiaDefinitiva) : '—'))}</tr>
+        <tr><td>Economia só adiada para ${p.ano + 1}</td>${td((l) => (l.id ? formatarReais(l.economiaAdiada) : '—'))}</tr>
+        <tr><td>Saldo do Livro Caixa em 31/12${p.caixaFimAno?.projetado ? ' (projetado)' : ''}</td>${td((l) => (l.caixa31Dez === null ? '—' : formatarReais(l.caixa31Dez)))}</tr>
+      </tbody>
+    </table>
+    ${destaque ? '<p class="rel-nota">★ maior economia definitiva (a economia adiada volta como imposto no ano seguinte).</p>' : ''}` : '';
+
   return `
     <section class="rel-bloco">
       <h2>${esc(p.nome)} <small class="rel-nota">CPF ${esc(formatarCpfCnpj(p.cpf))} · LCDPR ${p.obrigatoriedade.obrigado ? 'obrigatório' : 'opcional'} (receita bruta ${formatarReais(p.obrigatoriedade.receitaBruta)})</small></h2>
@@ -68,6 +91,7 @@ function secaoProdutor(p: PlanoProdutor, sim: DadosSimulacao): string {
       <p>Saldo no início de ${p.ano}: <strong class="num">${formatarReais(p.prejuizo.saldoNoInicio)}</strong>; compensado no ano (resultado real): <span class="num">${formatarReais(r.real.prejuizoCompensado)}</span>; saldo para os próximos anos: <span class="num">${formatarReais(r.real.prejuizoRemanescente)}</span>.
       ${p.prejuizo.lacunas.length ? ` Anos não carregados no painel: ${p.prejuizo.lacunas.join(', ')}.` : ''}</p>
       ${simulacao}
+      ${cenarios}
       ${!p.tabela.exata ? `<p class="rel-nota">Tabela progressiva de ${p.ano} não cadastrada: usada a de ${p.tabela.anoTabela}.</p>` : ''}
     </section>`;
 }

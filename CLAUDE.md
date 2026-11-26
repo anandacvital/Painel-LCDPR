@@ -157,3 +157,6 @@ LCDPR, perguntas 47 e 52; Lei nº 8.023/1990, art. 13). Por isso o critério pad
   (o LCDPR só traz o saldo geral).
 - 26/11/2026: arquivo que termina antes de 31/12 sem situação especial = PRÉVIA (alerta `PREVIA`, não transmitir).
   No Painel, a prévia compara com o mesmo período do ano anterior e os meses param no último mês do arquivo.
+- 26/11/2026: cenários do simulador guardados no IndexedDB (loja `cenarios`, banco v2) só com "Manter" ligado.
+  Economia separada em definitiva (despesa a mais) e adiada (receita empurrada para janeiro: o imposto volta
+  no ano seguinte); o "melhor cenário" é o de maior economia DEFINITIVA.

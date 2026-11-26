@@ -18,6 +18,7 @@ import { formatarCpfCnpj } from '../../domain/documentos';
 import { AVISO_ESTIMATIVA, PERCENTUAL_PRESUMIDO } from '../../domain/irpf';
 import { CUIDADOS, LIMITE_OBRIGATORIEDADE_LCDPR, melhorImposto, planejarProdutor, textoEquilibrio, type PlanoProdutor } from '../../domain/planejamento';
 import type { ArquivoLcdpr, ResultadoAnalise } from '../../parser/modelo';
+import { compararCenarios, melhorCenario, novoId, proximoNome, type Cenario, type LinhaComparacao } from '../../domain/cenarios';
 import { imprimirPlanejamento } from '../../report/planejamento';
 import { esc } from '../html';
 import { iconeAlerta, iconeImpressora } from '../icones';
@@ -33,11 +34,23 @@ export interface EstadoPlano {
   cpfSimulacao: string;
   anteciparDespesas: Centavos;
   postergarReceitas: Centavos;
+  /** Cenários salvos (de todos os produtores e anos). */
+  cenarios: Cenario[];
+  /**
+   * Avisado a cada mudança nos cenários. A aplicação grava no navegador SÓ se a
+   * pessoa marcou "Manter as análises neste computador" (desligado por padrão).
+   */
+  aoMudarCenarios?: (lista: Cenario[]) => void;
+  /** true quando os cenários estão sendo guardados no navegador. */
+  cenariosGuardados?: () => boolean;
 }
 
 export function novoEstadoPlano(): EstadoPlano {
-  return { prejuizoInicial: {}, usarProjecao: true, cpfSimulacao: '', anteciparDespesas: 0, postergarReceitas: 0 };
+  return { prejuizoInicial: {}, usarProjecao: true, cpfSimulacao: '', anteciparDespesas: 0, postergarReceitas: 0, cenarios: [] };
 }
+
+/** Cenários de um produtor e ano. */
+export const cenariosDe = (e: EstadoPlano, cpf: string, ano: number): Cenario[] => e.cenarios.filter((c) => c.cpf === cpf && c.ano === ano);
 
 const nomeMesCurto = (mes: number): string => ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'][mes - 1] ?? String(mes);
 const pctTexto = (f: number): string => `${(f * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`;
@@ -181,7 +194,11 @@ function blocoSimulador(planos: readonly PlanoProdutor[], e: EstadoPlano): strin
       ? `Economia estimada de ${formatarReais(economia)} no imposto de ${p.ano}.`
       : economia < 0
         ? `O imposto estimado AUMENTA ${formatarReais(-economia)} (verifique a opção mais vantajosa).`
-        : 'Sem efeito no imposto estimado: a opção pelos 20% continua sendo a melhor e não depende das despesas.';
+        : s.depois.maisVantajosa === 'presumido'
+          ? 'Sem efeito no imposto estimado: a opção pelos 20% continua sendo a melhor e não depende das despesas.'
+          : s.depois.real.base === 0
+            ? 'Sem efeito no imposto estimado: a base já está zerada (prejuízo compensado ou resultado negativo). Antecipar despesa só aumenta o prejuízo para os próximos anos.'
+            : 'Sem efeito no imposto estimado deste ano.';
   return `
     <section class="card plano-simulador">
       <h3>Simulador "e se"</h3>
@@ -207,7 +224,57 @@ function blocoSimulador(planos: readonly PlanoProdutor[], e: EstadoPlano): strin
       </div>
       <p class="plano-conclusao ${economia > 0 ? 'boa' : ''}" role="status" aria-live="polite">${esc(conclusao)}</p>
       ${s.cuidados.length ? `<ul class="plano-cuidados-sim">${s.cuidados.map((c) => `<li>${esc(c)}</li>`).join('')}</ul>` : ''}
+      <div class="plano-salvar">
+        <label class="campo-texto">Nome do cenário<input type="text" data-nome-novo maxlength="40" value="${esc(proximoNome(cenariosDe(e, p.cpf, p.ano)))}" /></label>
+        <button type="button" class="botao" data-salvar-cenario ${temSimulacao ? '' : 'disabled'}>Salvar cenário</button>
+        ${temSimulacao ? '' : '<span class="ajuda">Digite um valor acima para salvar.</span>'}
+      </div>
+      ${blocoCenarios(p, e)}
     </section>`;
+}
+
+const OPCAO_CURTA = { real: 'resultado real', presumido: '20% da receita', empate: 'empate' } as const;
+
+/** Comparação lado a lado dos cenários do produtor selecionado. */
+function blocoCenarios(p: PlanoProdutor, e: EstadoPlano): string {
+  const lista = cenariosDe(e, p.cpf, p.ano);
+  const guardados = e.cenariosGuardados?.() ?? false;
+  const nota = guardados
+    ? 'Os cenários ficam guardados só neste navegador (opção "Manter as análises neste computador" ligada).'
+    : 'Os cenários ficam só nesta página e somem ao fechá-la. Para guardá-los neste navegador, marque "Manter as análises neste computador" no topo.';
+  if (lista.length === 0) return `<p class="ajuda plano-nota-cenarios">${esc(nota)}</p>`;
+  const linhas = compararCenarios(p.entrada, lista, p.caixaFimAno?.valor ?? null);
+  const destaque = melhorCenario(linhas);
+  const col = (f: (l: LinhaComparacao) => string, classe = 'num'): string => linhas.map((l) => `<td class="${classe} ${l.id && l.id === destaque ? 'col-destaque' : ''}">${f(l)}</td>`).join('');
+  const sinal = (c: Centavos): string => `<span class="${c > 0 ? 'agro' : c < 0 ? 'negativo' : ''}">${formatarReais(c)}</span>`;
+  const caixaRotulo = p.caixaFimAno?.projetado ? 'Saldo do Livro Caixa em 31/12 (projetado)' : 'Saldo do Livro Caixa em 31/12';
+  return `
+    <div class="plano-cenarios">
+      <h4>Comparar cenários de ${esc(p.nome)} em ${p.ano}</h4>
+      <div class="tabela-rolagem">
+        <table class="tabela tabela-compacta tabela-cenarios">
+          <thead><tr><th></th>${linhas.map((l) => `<th class="num ${l.id && l.id === destaque ? 'col-destaque' : ''}">${l.id
+            ? `<input type="text" class="nome-cenario" data-renomear="${esc(l.id)}" value="${esc(l.nome)}" maxlength="40" aria-label="Nome do cenário" />
+               <span class="acoes-cenario"><button type="button" class="botao-link" data-carregar="${esc(l.id)}">usar no simulador</button><button type="button" class="botao-link perigo" data-apagar="${esc(l.id)}">apagar</button></span>
+               ${l.id === destaque ? '<span class="selo selo-melhor">Maior economia definitiva</span>' : ''}`
+            : esc(l.nome)}</th>`).join('')}</tr></thead>
+          <tbody>
+            <tr><td>Antecipar despesas</td>${col((l) => formatarReais(l.anteciparDespesas))}</tr>
+            <tr><td>Postergar receitas</td>${col((l) => formatarReais(l.postergarReceitas))}</tr>
+            <tr><td>Melhor opção</td>${col((l) => OPCAO_CURTA[l.opcao], '')}</tr>
+            <tr><td>Base de cálculo</td>${col((l) => formatarReais(l.base))}</tr>
+            <tr class="linha-total"><td>Imposto estimado</td>${col((l) => formatarReais(l.imposto))}</tr>
+            <tr><td>Economia contra a situação atual</td>${col((l) => (l.id ? sinal(l.economia) : '—'))}</tr>
+            <tr><td>· definitiva</td>${col((l) => (l.id ? formatarReais(l.economiaDefinitiva) : '—'))}</tr>
+            <tr><td>· só adiada para ${p.ano + 1}</td>${col((l) => (l.id ? formatarReais(l.economiaAdiada) : '—'))}</tr>
+            <tr><td>${esc(caixaRotulo)}</td>${col((l) => (l.caixa31Dez === null ? '—' : sinal(l.caixa31Dez)))}</tr>
+            <tr><td>Entra no caixa em janeiro</td>${col((l) => formatarReais(l.entradaJaneiro))}</tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="ajuda">Economia <strong>definitiva</strong> vem de despesa paga a mais; a <strong>adiada</strong> vem de receita empurrada para janeiro e volta como imposto em ${p.ano + 1}. Antecipar despesa e adiar receita tiram dinheiro do caixa em dezembro, e a economia de imposto só aparece na declaração. ${linhas.some((l) => (l.caixa31Dez ?? 0) < 0) ? '<strong class="negativo">Algum cenário deixa o caixa negativo em 31/12: avalie capital de giro ou crédito.</strong>' : ''}</p>
+      <p class="ajuda plano-nota-cenarios">${esc(nota)}</p>
+    </div>`;
 }
 
 /** Bloco 5: checklist de cuidados. */
@@ -304,6 +371,44 @@ export function abaPlanejamento(raiz: HTMLElement, analises: readonly ResultadoA
       desenhar();
     });
     raiz.querySelector<HTMLButtonElement>('[data-imprimir-plano]')?.addEventListener('click', () => imprimirPlanejamento(v, planos, e));
+
+    // ---- Cenários ----
+    const avisar = (): void => e.aoMudarCenarios?.(e.cenarios);
+    const doSimulador = planos.find((x) => x.cpf === e.cpfSimulacao) ?? planos[0];
+    raiz.querySelector<HTMLButtonElement>('[data-salvar-cenario]')?.addEventListener('click', () => {
+      if (!doSimulador) return;
+      const campo = raiz.querySelector<HTMLInputElement>('[data-nome-novo]');
+      const nome = campo?.value.trim() || proximoNome(cenariosDe(e, doSimulador.cpf, doSimulador.ano));
+      e.cenarios.push({ id: novoId(), nome, cpf: doSimulador.cpf, ano: doSimulador.ano, anteciparDespesas: e.anteciparDespesas, postergarReceitas: e.postergarReceitas });
+      avisar();
+      desenhar();
+    });
+    raiz.querySelectorAll<HTMLButtonElement>('[data-carregar]').forEach((b) => {
+      b.addEventListener('click', () => {
+        const c = e.cenarios.find((x) => x.id === b.dataset.carregar);
+        if (!c) return;
+        e.anteciparDespesas = c.anteciparDespesas;
+        e.postergarReceitas = c.postergarReceitas;
+        desenhar();
+        raiz.querySelector<HTMLInputElement>('input[data-sim="antecipar"]')?.focus();
+      });
+    });
+    raiz.querySelectorAll<HTMLButtonElement>('[data-apagar]').forEach((b) => {
+      b.addEventListener('click', () => {
+        e.cenarios = e.cenarios.filter((x) => x.id !== b.dataset.apagar);
+        avisar();
+        desenhar();
+      });
+    });
+    raiz.querySelectorAll<HTMLInputElement>('[data-renomear]').forEach((i) => {
+      i.addEventListener('change', () => {
+        const c = e.cenarios.find((x) => x.id === i.dataset.renomear);
+        if (!c || !i.value.trim()) return;
+        c.nome = i.value.trim();
+        avisar();
+        desenhar();
+      });
+    });
   };
 
   desenhar();

@@ -717,3 +717,90 @@ details > summary h3 {
   font-weight: 700;
   border-top: 2px solid var(--gp-borda);
 }
+
+/* ---- Cenários do simulador ---- */
+.plano-salvar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--esp-3);
+  align-items: flex-end;
+  margin-top: var(--esp-4);
+  padding-top: var(--esp-3);
+  border-top: 1px solid var(--gp-borda);
+}
+.plano-salvar .ajuda {
+  margin: 0;
+}
+.campo-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--gp-texto-suave);
+}
+.campo-texto input,
+.nome-cenario {
+  padding: 8px 10px;
+  border: 1px solid var(--gp-borda);
+  border-radius: 6px;
+  font: inherit;
+  font-size: 0.95rem;
+  color: var(--gp-texto);
+}
+.campo-texto input {
+  width: 240px;
+  max-width: 100%;
+}
+.botao[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.tabela-cenarios th {
+  vertical-align: top;
+  white-space: normal;
+  text-transform: none;
+  letter-spacing: 0;
+  min-width: 150px;
+}
+.nome-cenario {
+  width: 100%;
+  min-width: 120px;
+  padding: 4px 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: right;
+}
+.acoes-cenario {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--esp-2);
+  margin: 4px 0;
+}
+.acoes-cenario .botao-link {
+  font-size: 0.75rem;
+}
+.botao-link.perigo {
+  color: var(--gp-alerta);
+}
+.col-destaque {
+  background: var(--gp-agro-fundo);
+}
+.tabela-cenarios .selo-melhor {
+  display: inline-block;
+  white-space: nowrap;
+}
+.plano-cenarios h4 {
+  margin: var(--esp-4) 0 var(--esp-2);
+  font-size: 0.95rem;
+  color: var(--gp-navy);
+}
+.plano-nota-cenarios {
+  margin-top: var(--esp-2);
+  font-style: italic;
+}
+.tabela-cenarios thead th,
+.nome-cenario,
+.acoes-cenario .botao-link {
+  font-family: var(--fonte-texto);
+}

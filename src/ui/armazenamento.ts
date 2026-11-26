@@ -13,29 +13,35 @@
  * Todas as funções toleram navegador sem IndexedDB (modo anônimo, bloqueio
  * corporativo): nesse caso o painel funciona só em memória.
  */
+import type { Cenario } from '../domain/cenarios';
 import type { ResultadoAnalise } from '../parser/modelo';
 
 const BANCO = 'painel-lcdpr';
 const LOJA = 'analises';
-const VERSAO = 1;
+/** Cenários do simulador de IRPF (versão 2 do banco). Só valores digitados, nada do TXT. */
+const LOJA_CENARIOS = 'cenarios';
+const VERSAO = 2;
 const CHAVE_PREFERENCIA = 'painel-lcdpr:manter-dados';
 
 function abrir(): Promise<IDBDatabase> {
   return new Promise((resolver, rejeitar) => {
     const req = indexedDB.open(BANCO, VERSAO);
     req.onupgradeneeded = () => {
-      req.result.createObjectStore(LOJA);
+      // Cria só o que falta: quem já tinha a versão 1 mantém as análises salvas.
+      const nomes = req.result.objectStoreNames;
+      if (!nomes.contains(LOJA)) req.result.createObjectStore(LOJA);
+      if (!nomes.contains(LOJA_CENARIOS)) req.result.createObjectStore(LOJA_CENARIOS);
     };
     req.onsuccess = () => resolver(req.result);
     req.onerror = () => rejeitar(req.error ?? new Error('IndexedDB indisponível'));
   });
 }
 
-async function transacao<T>(modo: IDBTransactionMode, operacao: (loja: IDBObjectStore) => IDBRequest<T>): Promise<T> {
+async function transacao<T>(modo: IDBTransactionMode, operacao: (loja: IDBObjectStore) => IDBRequest<T>, loja = LOJA): Promise<T> {
   const db = await abrir();
   try {
     return await new Promise<T>((resolver, rejeitar) => {
-      const req = operacao(db.transaction(LOJA, modo).objectStore(LOJA));
+      const req = operacao(db.transaction(loja, modo).objectStore(loja));
       req.onsuccess = () => resolver(req.result);
       req.onerror = () => rejeitar(req.error ?? new Error('Falha no IndexedDB'));
     });
@@ -80,6 +86,23 @@ export async function removerAnalise(chave: string): Promise<void> {
 export async function carregarAnalises(): Promise<ResultadoAnalise[]> {
   try {
     return await transacao('readonly', (l) => l.getAll() as IDBRequest<ResultadoAnalise[]>);
+  } catch {
+    return [];
+  }
+}
+
+/** Grava a lista inteira de cenários (é pequena: substituir tudo é mais simples e seguro). */
+export async function salvarCenarios(cenarios: readonly Cenario[]): Promise<void> {
+  try {
+    await transacao('readwrite', (l) => l.put([...cenarios], 'todos'), LOJA_CENARIOS);
+  } catch {
+    /* sem IndexedDB: segue só em memória */
+  }
+}
+
+export async function carregarCenarios(): Promise<Cenario[]> {
+  try {
+    return ((await transacao('readonly', (l) => l.get('todos') as IDBRequest<Cenario[] | undefined>, LOJA_CENARIOS)) ?? []);
   } catch {
     return [];
   }

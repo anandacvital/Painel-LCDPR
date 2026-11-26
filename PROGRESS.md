@@ -79,8 +79,16 @@ _Última atualização: 26/11/2026 (Fase 2)_
 - Cálculos em `domain/planejamento.ts` e `domain/irpf.ts`; tela em `ui/painel/planejamento.ts`;
   relatório em `report/planejamento.ts`. 120 testes.
 
+### Cenários do simulador (branch `fase-4-cenarios`)
+- Salvar cenários com nome (por produtor e ano), renomear, apagar e "usar no simulador".
+- Comparação lado a lado: melhor opção, base, imposto, economia (definitiva x só adiada para o ano
+  seguinte), saldo do Livro Caixa em 31/12 e entrada em janeiro; destaque do cenário com maior
+  economia DEFINITIVA; alerta de caixa negativo. Também no relatório de planejamento impresso.
+- Guardados no IndexedDB (loja `cenarios`, banco versão 2) SÓ com "Manter as análises" ligado;
+  "Apagar dados" apaga junto. Cálculos em `domain/cenarios.ts`. 126 testes.
+
 ## Em andamento
-- PR da Fase 4.
+- PR dos cenários.
 
 ## Pendências / dúvidas para a Ananda
 - Cópia do TXT real ainda na biblioteca de arquivos do projeto (aguardando "pode apagar").

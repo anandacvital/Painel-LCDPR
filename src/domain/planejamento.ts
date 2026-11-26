@@ -142,6 +142,12 @@ export interface PlanoProdutor {
   simulacao: ResultadoSimulacao;
   prejuizo: CadeiaPrejuizo;
   tabela: { anoTabela: number; exata: boolean };
+  /**
+   * Saldo do Livro Caixa da atividade em 31/12 (o LCDPR começa o ano em zero):
+   * último saldo do arquivo; na prévia com projeção, somado ao resultado projetado
+   * dos meses restantes. null se o arquivo não tem lançamentos.
+   */
+  caixaFimAno: { valor: Centavos; projetado: boolean } | null;
   obrigatoriedade: { receitaBruta: Centavos; obrigado: boolean };
 }
 
@@ -175,6 +181,13 @@ export function planejarProdutor(arquivos: readonly ArquivoLcdpr[], ano: number,
   const prejuizo = encadearPrejuizo(resultados, o.prejuizoInicial ?? 0, ano);
 
   const entrada: EntradaIrpf = { receitaBruta, despesas, prejuizoAnterior: prejuizo.saldoNoInicio, ano };
+  const ultimo = [...doAno.lancamentos].sort((a, b) => a.data.iso.localeCompare(b.data.iso) || a.linha - b.linha).at(-1);
+  const caixaFimAno = ultimo
+    ? {
+        valor: ultimo.saldo + (usaProjecao ? (receitaBruta - t.receitas) - (despesas - t.despesas) : 0),
+        projetado: usaProjecao,
+      }
+    : null;
   const { anoTabela, exata } = tabelaDoAno(ano);
   return {
     cpf,
@@ -190,6 +203,7 @@ export function planejarProdutor(arquivos: readonly ArquivoLcdpr[], ano: number,
     simulacao: simular(entrada, { anteciparDespesas: o.anteciparDespesas ?? 0, postergarReceitas: o.postergarReceitas ?? 0 }),
     prejuizo,
     tabela: { anoTabela, exata },
+    caixaFimAno,
     obrigatoriedade: { receitaBruta, obrigado: receitaBruta > LIMITE_OBRIGATORIEDADE_LCDPR },
   };
 }
