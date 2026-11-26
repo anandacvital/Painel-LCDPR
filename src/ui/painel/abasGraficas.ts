@@ -23,7 +23,7 @@ import type { ResultadoAnalise } from '../../parser/modelo';
 import { COR, desenharGrafico, eixoMeses, eixoValor, MESES_CURTOS, reaisCompacto } from '../graficos/echarts';
 import { esc, numeroBR } from '../html';
 import { cartaoKpi, molduraGrafico, pctTexto } from './componentes';
-import { montarVisao, nomeConta, nomeImovel, type Visao } from './contexto';
+import { avisoPrevia, montarVisao, nomeConta, nomeImovel, textoComparacao, type Visao } from './contexto';
 
 const el = (raiz: HTMLElement, id: string): HTMLElement => raiz.querySelector<HTMLElement>(`#${id}`)!;
 const vals = (meses: readonly TotalMensal[], campo: 'receitas' | 'despesas' | 'resultado' | 'acumulado') => meses.map((m) => m[campo]);
@@ -37,20 +37,22 @@ export function abaVisaoExecutiva(raiz: HTMLElement, v: Visao): void {
   const irpf = calcularIrpf({ receitaBruta: t.receitas, despesas: t.despesas });
   const irpfAnt = a ? calcularIrpf({ receitaBruta: a.receitas, despesas: a.despesas }) : null;
   const melhor = (r: typeof irpf) => (r.maisVantajosa === 'presumido' ? r.presumido.impostoEstimado : r.real.impostoEstimado);
-  const destaques = destaquesExecutivos(t, v.meses, a);
+  const destaques = destaquesExecutivos(t, v.meses, a, textoComparacao(v));
+  const vs = textoComparacao(v);
 
   raiz.innerHTML = `
+    ${v.previa ? `<div class="aviso-previa" role="note"><strong>Prévia do ano em andamento.</strong> ${esc(avisoPrevia(v))}</div>` : ''}
     <div class="grade-kpi-painel">
-      ${cartaoKpi({ rotulo: 'Receita bruta', valor: t.receitas, tom: 'agro', anterior: a?.receitas ?? null })}
-      ${cartaoKpi({ rotulo: 'Despesas', valor: t.despesas, tom: 'despesa', anterior: a?.despesas ?? null, maiorEhMelhor: false })}
-      ${cartaoKpi({ rotulo: 'Resultado', valor: t.resultado, tom: t.resultado < 0 ? 'negativo' : 'positivo', anterior: a?.resultado ?? null })}
-      ${cartaoKpi({ rotulo: 'Margem', valor: null, formatado: pctTexto(t.margem), atualComparavel: t.margem ?? undefined, anterior: a?.margem ?? null, emPontos: true })}
+      ${cartaoKpi({ rotulo: 'Receita bruta', valor: t.receitas, tom: 'agro', anterior: a?.receitas ?? null, vs })}
+      ${cartaoKpi({ rotulo: 'Despesas', valor: t.despesas, tom: 'despesa', anterior: a?.despesas ?? null, vs, maiorEhMelhor: false })}
+      ${cartaoKpi({ rotulo: 'Resultado', valor: t.resultado, tom: t.resultado < 0 ? 'negativo' : 'positivo', anterior: a?.resultado ?? null, vs })}
+      ${cartaoKpi({ rotulo: 'Margem', valor: null, formatado: pctTexto(t.margem), atualComparavel: t.margem ?? undefined, anterior: a?.margem ?? null, vs, emPontos: true })}
       ${cartaoKpi({
         rotulo: 'IRPF estimado',
         valor: melhor(irpf),
-        anterior: irpfAnt ? melhor(irpfAnt) : null,
+        anterior: irpfAnt ? melhor(irpfAnt) : null, vs,
         maiorEhMelhor: false,
-        texto: irpf.maisVantajosa === 'presumido' ? 'pela opção de 20% da receita bruta' : 'pelo resultado real',
+        texto: `${irpf.maisVantajosa === 'presumido' ? 'pela opção de 20% da receita bruta' : 'pelo resultado real'}${v.previa ? ' (parcial, só o período da prévia)' : ''}`,
       })}
     </div>
     <p class="nota-estimativa">${esc(AVISO_ESTIMATIVA)}</p>
@@ -301,7 +303,7 @@ export function abaComparativo(raiz: HTMLElement, analises: readonly ResultadoAn
   const anos = [...new Set(analises.map((r) => r.arquivo.anoBase).filter((x): x is number => x !== null))].sort();
   const porAno = anos.map((a) => {
     const v = montarVisao(analises, 'todos', a, 'somar');
-    return { ano: a, meses: v?.meses ?? mensal([], a), totais: v?.totais ?? totalizar([]) };
+    return { ano: a, meses: v?.meses ?? mensal([], a), totais: v?.totais ?? totalizar([]), visao: v };
   });
   const lider = produtores[0];
   const tituloProd = produtores.length < 2
@@ -309,16 +311,20 @@ export function abaComparativo(raiz: HTMLElement, analises: readonly ResultadoAn
     : `${lider!.nome} lidera o resultado em ${ano} (${formatarReais(lider!.t.resultado)})`;
   const ultimo = porAno.at(-1);
   const penultimo = porAno.at(-2);
+  const previaUltimo = ultimo?.visao?.previa ?? null;
   const tituloAnos = porAno.length < 2
     ? 'Carregue arquivos de mais de um ano para comparar ano contra ano'
-    : `Resultado consolidado de ${ultimo!.ano}: ${formatarReais(ultimo!.totais.resultado)} contra ${formatarReais(penultimo!.totais.resultado)} em ${penultimo!.ano}`;
+    : previaUltimo && ultimo!.visao?.anterior && penultimo!.ano === ultimo!.ano - 1
+      // Prévia: compara com o mesmo período do ano anterior, não com o ano inteiro.
+      ? `Prévia de ${ultimo!.ano} até ${nomeMes(previaUltimo.fim.slice(0, 7)).toLowerCase()}: ${formatarReais(ultimo!.totais.resultado)} contra ${formatarReais(ultimo!.visao.anterior.totais.resultado)} no mesmo período de ${penultimo!.ano}`
+      : `Resultado consolidado de ${ultimo!.ano}: ${formatarReais(ultimo!.totais.resultado)} contra ${formatarReais(penultimo!.totais.resultado)} em ${penultimo!.ano}`;
 
   raiz.innerHTML = `
     <p class="ajuda">O comparativo sempre considera todos os produtores carregados, independentemente do filtro do cabeçalho. Soma simples (sem ajuste de condôminos).</p>
     ${produtores.length < 2
       ? `<section class="card"><h3>${esc(tituloProd)}</h3><p class="ajuda">Com arquivos de dois ou mais produtores do mesmo ano, este quadro mostra receitas, despesas e resultado lado a lado.</p></section>`
       : molduraGrafico('g-produtores', tituloProd, `Receitas, despesas e resultado por produtor em ${ano}.`, Math.max(260, produtores.length * 70 + 80))}
-    ${molduraGrafico('g-anos', tituloAnos, 'Resultado acumulado mês a mês de cada ano (todos os produtores).', 340)}
+    ${molduraGrafico('g-anos', tituloAnos, 'Resultado acumulado mês a mês de cada ano. Cada linha soma os produtores que têm arquivo naquele ano.', 340)}
   `;
 
   if (produtores.length >= 2) desenharGrafico(el(raiz, 'g-produtores'), {
@@ -338,7 +344,9 @@ export function abaComparativo(raiz: HTMLElement, analises: readonly ResultadoAn
     xAxis: eixoMeses(),
     yAxis: eixoValor(),
     series: porAno.map((p, i) => ({
-      name: String(p.ano), type: 'line', smooth: true, data: vals(p.meses, 'acumulado'),
+      // Na prévia, a linha para no último mês do arquivo (os meses seguintes ainda não aconteceram).
+      name: p.visao?.previa ? `${p.ano} (prévia)` : String(p.ano), type: 'line', smooth: true,
+      data: vals(p.meses, 'acumulado').map((x, m) => (p.visao?.previa && m + 1 > p.visao.previa.ateMes ? null : x)),
       lineStyle: { width: i === porAno.length - 1 ? 3 : 2, color: tons[Math.max(0, tons.length - porAno.length + i)] },
       itemStyle: { color: tons[Math.max(0, tons.length - porAno.length + i)] },
     })),

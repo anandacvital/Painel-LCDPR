@@ -15,7 +15,8 @@ import { nomeMes } from '../../domain/destaques';
 import { TIPO_DOC, TIPO_LANC } from '../../parser/leiaute';
 import { gerarCsv } from '../../report/csv';
 import { baixarArquivo, esc, numeroBR } from '../html';
-import { iconeDownload } from '../icones';
+import { iconeDownload, iconeImpressora } from '../icones';
+import { imprimirDetalhamento } from '../../report/razoes';
 import { nomeConta, nomeImovel, type LancamentoVisao, type Visao } from './contexto';
 
 /** Altura fixa de cada linha, em pixels (tem que bater com o CSS .tabela-virtual td). */
@@ -67,7 +68,10 @@ export function abaDetalhamento(raiz: HTMLElement, v: Visao): void {
       </div>
       <div class="barra-detalhe">
         <p class="contagem" role="status" aria-live="polite"></p>
-        <button type="button" class="botao-sec" data-exportar>${iconeDownload}Exportar CSV (filtro atual)</button>
+        <div class="acoes-detalhe">
+          <button type="button" class="botao-sec" data-imprimir-filtro>${iconeImpressora}Imprimir (filtro atual)</button>
+          <button type="button" class="botao-sec" data-exportar>${iconeDownload}Exportar CSV (filtro atual)</button>
+        </div>
       </div>
       <div class="tabela-virtual" tabindex="0" aria-label="Lançamentos">
         <table class="tabela">
@@ -159,6 +163,16 @@ export function abaDetalhamento(raiz: HTMLElement, v: Visao): void {
       pendente = false;
       desenharJanela();
     });
+  });
+
+  raiz.querySelector<HTMLButtonElement>('[data-imprimir-filtro]')!.addEventListener('click', () => {
+    // Descreve os filtros em texto, para o cabeçalho do relatório dizer o que foi selecionado.
+    const descritos: string[] = [];
+    raiz.querySelectorAll<HTMLSelectElement>('select[data-filtro]').forEach((s) => {
+      if (s.value) descritos.push(`${s.closest('label')?.firstChild?.textContent?.trim() ?? ''}: ${s.selectedOptions[0]?.textContent ?? s.value}`);
+    });
+    if (filtro.busca) descritos.push(`Busca: "${filtro.busca}"`);
+    imprimirDetalhamento(v, visiveis, descritos);
   });
 
   raiz.querySelector<HTMLButtonElement>('[data-exportar]')!.addEventListener('click', () => {

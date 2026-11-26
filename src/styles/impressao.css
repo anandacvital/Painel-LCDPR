@@ -286,3 +286,32 @@
     break-after: avoid;
   }
 }
+
+/* ---- Razões e Livro Caixa (tabelas longas, letra menor) ---- */
+.rel-razao {
+  font-size: 7.5pt;
+}
+.rel-razao th,
+.rel-razao td {
+  padding: 2pt 4pt;
+}
+.rel-razao tfoot th {
+  font-size: 7.5pt;
+  background: var(--gp-fundo);
+}
+
+/* Relatórios com muitas colunas (Livro Caixa, razões, lançamentos selecionados): A4 paisagem. */
+@page paisagem {
+  size: A4 landscape;
+  margin: 12mm 12mm 14mm;
+}
+.rel-paisagem {
+  page: paisagem;
+}
+.rel-razao td:nth-child(1) {
+  white-space: nowrap;
+}
+.rel-razao td small {
+  display: block;
+  font-size: 6.5pt;
+}

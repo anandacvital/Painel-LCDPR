@@ -30,7 +30,7 @@ import type { ResultadoAnalise, Severidade } from '../parser/modelo';
 import { COR, desenharGrafico, eixoMeses, eixoValor, liberarGraficos, reaisCompacto } from '../ui/graficos/echarts';
 import { esc, numeroBR } from '../ui/html';
 import { DESCRICAO_CRITERIO } from '../domain/consolidacao';
-import { nomeImovel, type Visao } from '../ui/painel/contexto';
+import { avisoPrevia, nomeImovel, textoComparacao, type Visao } from '../ui/painel/contexto';
 import { agruparPorRegra, conclusaoSaude, ROTULO } from '../ui/saudeArquivo';
 
 const pct = (f: number | null): string => (f === null ? '—' : `${(f * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`);
@@ -43,7 +43,7 @@ function dataEmissao(agora = new Date()): string {
 }
 
 /** Cabeçalho comum: título do relatório + quem, CPF, ano-base e emissão. */
-function cabecalho(titulo: string, campos: [string, string][]): string {
+export function cabecalho(titulo: string, campos: [string, string][]): string {
   return `
     <header class="rel-cabecalho">
       <div class="rel-marca">Painel LCDPR · Grupo Paraná</div>
@@ -55,7 +55,7 @@ function cabecalho(titulo: string, campos: [string, string][]): string {
     </header>`;
 }
 
-const RODAPE = `
+export const RODAPE = `
   <footer class="rel-rodape">
     Documento gerado no navegador a partir do arquivo LCDPR; nenhum dado foi enviado pela internet.
     Contém informações fiscais sigilosas: guarde e compartilhe com cuidado.
@@ -130,11 +130,11 @@ export function htmlRelatorioValidador(r: ResultadoAnalise): string {
 // ===========================================================================
 // RELATÓRIO EXECUTIVO (PAINEL DO LIVRO CAIXA)
 // ===========================================================================
-function linhaVariacao(atual: number, anterior: number | undefined, maiorEhMelhor = true): string {
+function linhaVariacao(atual: number, anterior: number | undefined, maiorEhMelhor = true, vs = 'ano anterior'): string {
   const v = variacao(atual, anterior);
   if (v === null) return '';
   const bom = v >= 0 === maiorEhMelhor;
-  return `<small class="${bom ? 'rel-boa' : 'rel-ruim'}">${v >= 0 ? '▲' : '▼'} ${pct(Math.abs(v))} vs. ano anterior</small>`;
+  return `<small class="${bom ? 'rel-boa' : 'rel-ruim'}">${v >= 0 ? '▲' : '▼'} ${pct(Math.abs(v))} vs. ${esc(vs)}</small>`;
 }
 
 export function htmlRelatorioExecutivo(v: Visao): string {
@@ -142,7 +142,7 @@ export function htmlRelatorioExecutivo(v: Visao): string {
   const a = v.anterior?.totais;
   const irpf = calcularIrpf({ receitaBruta: t.receitas, despesas: t.despesas });
   const imposto = irpf.maisVantajosa === 'presumido' ? irpf.presumido.impostoEstimado : irpf.real.impostoEstimado;
-  const destaques = destaquesExecutivos(t, v.meses, a);
+  const destaques = destaquesExecutivos(t, v.meses, a, textoComparacao(v));
   const cpfs = [...new Set(v.arquivos.map((x) => x.abertura?.cpf).filter((c): c is string => !!c))];
 
   const participantes = agruparPor(v.lancamentos, (l) => l.idPartic);
@@ -154,6 +154,7 @@ export function htmlRelatorioExecutivo(v: Visao): string {
     return { ...g, nome: nomeImovel(v, cpf, cod), exploracao: cad ? (TIPO_EXPLORACAO[cad.tipoExploracao] ?? '—') : '—', participacao: cad?.participacao ?? null };
   }).sort((x, y) => y.resultado - x.resultado);
   const avisos = v.consolidacao?.avisos ?? [];
+  const vs = textoComparacao(v);
 
   const tabelaTop = (titulo: string, lista: typeof clientes, campo: 'receitas' | 'despesas', total: number) => `
     <div>
@@ -168,15 +169,16 @@ export function htmlRelatorioExecutivo(v: Visao): string {
     ${cabecalho('Relatório Executivo do Livro Caixa', [
       ['Produtor', v.rotulo],
       [cpfs.length > 1 ? 'CPFs' : 'CPF', cpfs.map(formatarCpfCnpj).join(', ') || '—'],
-      ['Ano-base', String(v.ano)],
+      ['Ano-base', v.previa ? `${v.ano} (prévia até ${v.previa.fim.split('-').reverse().join('/')})` : String(v.ano)],
       ...(v.consolidacao && v.arquivos.length > 1 ? [['Consolidação', DESCRICAO_CRITERIO[v.consolidacao.criterio]] as [string, string]] : []),
     ])}
 
+    ${v.previa ? `<div class="rel-avisos rel-bloco"><strong>Prévia do ano em andamento.</strong> ${esc(avisoPrevia(v))}</div>` : ''}
     <section class="rel-bloco">
       <div class="rel-kpis rel-kpis-5">
-        <div class="rel-kpi rel-kpi-receita"><span>Receita bruta</span><strong>${formatarReais(t.receitas)}</strong>${linhaVariacao(t.receitas, a?.receitas)}</div>
-        <div class="rel-kpi rel-kpi-despesa"><span>Despesas</span><strong>${formatarReais(t.despesas)}</strong>${linhaVariacao(t.despesas, a?.despesas, false)}</div>
-        <div class="rel-kpi ${t.resultado < 0 ? 'rel-kpi-despesa' : 'rel-kpi-receita'}"><span>Resultado</span><strong>${formatarReais(t.resultado)}</strong>${linhaVariacao(t.resultado, a?.resultado)}</div>
+        <div class="rel-kpi rel-kpi-receita"><span>Receita bruta</span><strong>${formatarReais(t.receitas)}</strong>${linhaVariacao(t.receitas, a?.receitas, true, vs)}</div>
+        <div class="rel-kpi rel-kpi-despesa"><span>Despesas</span><strong>${formatarReais(t.despesas)}</strong>${linhaVariacao(t.despesas, a?.despesas, false, vs)}</div>
+        <div class="rel-kpi ${t.resultado < 0 ? 'rel-kpi-despesa' : 'rel-kpi-receita'}"><span>Resultado</span><strong>${formatarReais(t.resultado)}</strong>${linhaVariacao(t.resultado, a?.resultado, true, vs)}</div>
         <div class="rel-kpi"><span>Margem</span><strong>${pct(t.margem)}</strong></div>
         <div class="rel-kpi"><span>IRPF estimado</span><strong>${formatarReais(imposto)}</strong><small>${irpf.maisVantajosa === 'presumido' ? 'opção de 20% da receita bruta' : 'resultado real'}</small></div>
       </div>
@@ -274,7 +276,7 @@ function areaImpressao(): HTMLElement {
   return area;
 }
 
-function imprimir(html: string, tituloDocumento: string, depois?: (area: HTMLElement) => void): void {
+export function imprimir(html: string, tituloDocumento: string, depois?: (area: HTMLElement) => void): void {
   const area = areaImpressao();
   liberarGraficos(area);
   area.innerHTML = `<article class="relatorio">${html}</article>`;
@@ -293,7 +295,7 @@ function imprimir(html: string, tituloDocumento: string, depois?: (area: HTMLEle
 }
 
 /** Nome de arquivo seguro: só letras, números e hífen. */
-const slug = (s: string): string => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase();
+export const slug = (s: string): string => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase();
 
 export function imprimirValidador(r: ResultadoAnalise): void {
   imprimir(htmlRelatorioValidador(r), `validador-lcdpr-${r.arquivo.anoBase ?? ''}-${slug(r.arquivo.abertura?.nome ?? r.arquivo.nomeArquivo)}`);

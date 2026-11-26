@@ -13,8 +13,9 @@ import { liberarGraficos } from '../graficos/echarts';
 import { esc } from '../html';
 import { iconeAlerta, iconeImpressora } from '../icones';
 import { imprimirExecutivo } from '../../report/impressao';
+import { imprimirRazao, TITULO_RAZAO, type TipoRazao } from '../../report/razoes';
 import { abaComparativo, abaFluxoCaixa, abaImoveis, abaReceitasDespesas, abaVisaoExecutiva } from './abasGraficas';
-import { montarVisao, TODOS } from './contexto';
+import { detectarPrevia, montarVisao, TODOS } from './contexto';
 import { abaDetalhamento } from './detalhamento';
 
 export type AbaPainel = 'executiva' | 'fluxo' | 'receitas' | 'imoveis' | 'comparativo' | 'detalhamento';
@@ -69,6 +70,8 @@ export function montarPainel(raiz: HTMLElement, analises: readonly ResultadoAnal
   if (estado.ano === null || !anos.includes(estado.ano)) estado.ano = anos[0] ?? null;
   const ano = estado.ano;
 
+  // Ano com arquivo parcial (termina antes de 31/12): aparece como "(prévia)" no seletor.
+  const anoEhPrevia = (a: number): boolean => detectarPrevia(analises.filter((r) => r.arquivo.anoBase === a).map((r) => r.arquivo)) !== null;
   const visao = ano === null ? null : montarVisao(analises, estado.produtor, ano, estado.criterio);
   const variosProdutores = (visao?.arquivos.length ?? 0) > 1;
 
@@ -83,7 +86,7 @@ export function montarPainel(raiz: HTMLElement, analises: readonly ResultadoAnal
   raiz.innerHTML = `
     <section class="card barra-painel" aria-label="O que o painel está mostrando">
       <label>Produtor<select data-sel="produtor">${opcoesProdutor}</select></label>
-      <label>Ano-base<select data-sel="ano">${anos.map((a) => `<option value="${a}" ${a === ano ? 'selected' : ''}>${a}</option>`).join('')}</select></label>
+      <label>Ano-base<select data-sel="ano">${anos.map((a) => `<option value="${a}" ${a === ano ? 'selected' : ''}>${a}${anoEhPrevia(a) ? ' (prévia)' : ''}</option>`).join('')}</select></label>
       ${variosProdutores ? `
         <label class="criterio">Como consolidar
           <select data-sel="criterio">
@@ -94,7 +97,16 @@ export function montarPainel(raiz: HTMLElement, analises: readonly ResultadoAnal
         <button type="button" class="indicador-saude semaforo semaforo-${visao.semaforo}" data-validador title="Abrir o Validador">
           ${esc(SAUDE[visao.semaforo])}<span class="botao-link">ver no Validador</span>
         </button>
-        <button type="button" class="botao botao-imprimir" data-imprimir="executivo">${iconeImpressora}Imprimir relatório executivo</button>` : ''}
+        <details class="menu-imprimir">
+          <summary class="botao botao-imprimir">${iconeImpressora}Imprimir relatórios</summary>
+          <div class="menu-imprimir-opcoes" role="menu">
+            <button type="button" role="menuitem" data-imprimir="executivo"><strong>Relatório executivo</strong><small>indicadores, gráficos e destaques</small></button>
+            <button type="button" role="menuitem" data-razao="livro"><strong>${TITULO_RAZAO.livro}</strong><small>todos os lançamentos, saldo e totais por mês</small></button>
+            <button type="button" role="menuitem" data-razao="imovel"><strong>${TITULO_RAZAO.imovel}</strong><small>lançamentos e subtotal de cada imóvel</small></button>
+            <button type="button" role="menuitem" data-razao="conta"><strong>${TITULO_RAZAO.conta}</strong><small>para conferir com o extrato</small></button>
+            <button type="button" role="menuitem" data-razao="participante"><strong>${TITULO_RAZAO.participante}</strong><small>cada cliente e fornecedor, com % do total</small></button>
+          </div>
+        </details>` : ''}
     </section>
     ${avisos.length ? `<section class="avisos-consolidacao" role="note">${iconeAlerta}<ul>${avisos.map((a) => `<li>${esc(a)}</li>`).join('')}</ul></section>` : ''}
     <nav class="abas-painel" role="tablist" aria-label="Abas do Painel">
@@ -143,5 +155,17 @@ export function montarPainel(raiz: HTMLElement, analises: readonly ResultadoAnal
     });
   });
   raiz.querySelector<HTMLButtonElement>('[data-validador]')?.addEventListener('click', irParaValidador);
-  if (visao) raiz.querySelector<HTMLButtonElement>('[data-imprimir="executivo"]')?.addEventListener('click', () => imprimirExecutivo(visao));
+  if (visao) {
+    const menu = raiz.querySelector<HTMLDetailsElement>('.menu-imprimir');
+    raiz.querySelector<HTMLButtonElement>('[data-imprimir="executivo"]')?.addEventListener('click', () => {
+      if (menu) menu.open = false;
+      imprimirExecutivo(visao);
+    });
+    raiz.querySelectorAll<HTMLButtonElement>('[data-razao]').forEach((b) => {
+      b.addEventListener('click', () => {
+        if (menu) menu.open = false;
+        imprimirRazao(visao, b.dataset.razao as TipoRazao);
+      });
+    });
+  }
 }

@@ -456,3 +456,77 @@ details > summary h3 {
     grid-template-columns: 1fr;
   }
 }
+
+/* ---- Menu "Imprimir relatórios" ---- */
+.menu-imprimir {
+  position: relative;
+}
+.menu-imprimir > summary {
+  list-style: none;
+  cursor: pointer;
+}
+.menu-imprimir > summary::-webkit-details-marker {
+  display: none;
+}
+.menu-imprimir > summary::before {
+  content: none;
+}
+.menu-imprimir-opcoes {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  min-width: 300px;
+  padding: 6px;
+  background: var(--gp-branco);
+  border: 1px solid var(--gp-borda);
+  border-radius: 12px;
+  box-shadow: var(--sombra);
+}
+.menu-imprimir-opcoes button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--gp-texto);
+  text-align: left;
+}
+.menu-imprimir-opcoes button:hover,
+.menu-imprimir-opcoes button:focus-visible {
+  background: var(--gp-fundo);
+}
+.menu-imprimir-opcoes small {
+  color: var(--gp-texto-suave);
+  font-size: 0.78rem;
+}
+.acoes-detalhe {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--esp-2);
+}
+@media (max-width: 720px) {
+  .menu-imprimir-opcoes {
+    position: static;
+    margin-top: 6px;
+    min-width: 0;
+  }
+}
+
+/* Prévia do ano em andamento (arquivo que termina antes de 31/12). Âmbar: é um alerta do semáforo. */
+.aviso-previa {
+  padding: var(--esp-3) var(--esp-4);
+  border-left: 4px solid var(--gp-atencao);
+  border-radius: 6px;
+  background: var(--gp-atencao-fundo);
+  color: var(--gp-texto);
+  font-size: 0.9rem;
+}
+.aviso-previa strong {
+  color: var(--gp-atencao);
+}

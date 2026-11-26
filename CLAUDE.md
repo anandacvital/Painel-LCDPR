@@ -146,3 +146,7 @@ LCDPR, perguntas 47 e 52; Lei nº 8.023/1990, art. 13). Por isso o critério pad
 - 26/11/2026: a pedido da Ananda, despesas em vermelho e receitas em verde em todos os gráficos do Painel.
 - 26/11/2026: Ananda pediu os relatórios impressos antes do IRPF (Fase 5 antecipada). Impressão/PDF pelo
   navegador (window.print + CSS A4), sem biblioteca de PDF: nada sai do computador. Fase 4 (IRPF) vem depois.
+- 26/11/2026: razões e Livro Caixa impressos em A4 paisagem; o saldo da Razão por conta é CALCULADO pelo painel
+  (o LCDPR só traz o saldo geral).
+- 26/11/2026: arquivo que termina antes de 31/12 sem situação especial = PRÉVIA (alerta `PREVIA`, não transmitir).
+  No Painel, a prévia compara com o mesmo período do ano anterior e os meses param no último mês do arquivo.
