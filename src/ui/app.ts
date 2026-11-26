@@ -133,10 +133,11 @@ export function iniciarApp(raiz: HTMLElement): void {
             <button type="button" class="selecionar" data-chave="${esc(chave)}" aria-pressed="${ativo}">
               <span class="icone-arquivo">${iconeArquivo}</span>
               <span class="dados">
-                <strong>${esc(ab?.nome ?? r.arquivo.nomeArquivo)}</strong>
-                <span>${esc(ab ? formatarCpfCnpj(ab.cpf) : '')} · Ano-base ${esc(r.arquivo.anoBase ?? '?')} · ${numeroBR(r.arquivo.lancamentos.length)} lançamentos</span>
+                <strong title="${esc(ab?.nome ?? r.arquivo.nomeArquivo)}">${esc(ab?.nome ?? r.arquivo.nomeArquivo)}</strong>
+                <span class="linha-dado">${esc(ab ? `CPF ${formatarCpfCnpj(ab.cpf)}` : r.arquivo.nomeArquivo)}</span>
+                <span class="linha-dado">Ano-base <strong class="num">${esc(r.arquivo.anoBase ?? '?')}</strong> · ${numeroBR(r.arquivo.lancamentos.length)} lançamentos</span>
+                <span class="semaforo semaforo-${r.saude.semaforo}">${ROTULO_SEMAFORO[r.saude.semaforo]}</span>
               </span>
-              <span class="semaforo semaforo-${r.saude.semaforo}">${ROTULO_SEMAFORO[r.saude.semaforo]}</span>
             </button>
             <button type="button" class="remover" data-remover="${esc(chave)}" aria-label="Remover ${esc(r.arquivo.nomeArquivo)} da lista">${iconeFechar}</button>
           </article>`;

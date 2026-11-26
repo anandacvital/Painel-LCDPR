@@ -58,7 +58,8 @@ export function base(): echarts.EChartsCoreOption {
       textStyle: { color: COR.texto, fontFamily: FONTE },
       valueFormatter: (v: unknown) => (typeof v === 'number' ? formatarReais(v) : String(v)),
     },
-    legend: { bottom: 0, icon: 'roundRect', textStyle: { color: COR.textoSuave } },
+    // 'scroll': a legenda fica numa linha só (no celular não sobe por cima do eixo).
+    legend: { type: 'scroll', bottom: 0, icon: 'roundRect', textStyle: { color: COR.textoSuave } },
     grid: { left: 8, right: 16, top: 16, bottom: 40, containLabel: true },
   };
 }
