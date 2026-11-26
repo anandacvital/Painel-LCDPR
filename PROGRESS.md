@@ -17,10 +17,12 @@ _Última atualização: 25/11/2026_
 - PR da Fase 0 aguardando revisão.
 
 ## Pendências da usuária
-- Repositório é **privado**: GitHub Pages em repositório privado exige plano pago
-  (GitHub Pro) e, mesmo assim, o site fica com endereço público (sem dados).
-  Decidir entre: assinar GitHub Pro, tornar o repositório público ou usar só localmente.
-- Ativar o Pages: Settings → Pages → Source: "GitHub Actions".
+- 26/11/2026: decidido tornar o repositório **público** e publicar no GitHub Pages gratuito
+  (sem custo). Histórico do git auditado antes: nenhum dado real.
+- Passos manuais (só a dona do repositório pode fazer):
+  1. Settings → General → Danger Zone → Change visibility → Public.
+  2. Settings → Pages → Source: "GitHub Actions".
+  3. Fazer o merge do PR #1; o deploy roda sozinho.
 
 ## Próximos passos (Fase 1 — Parser e validação, branch `fase-1-parser`)
 1. Conferir cada campo no Manual do LCDPR e montar a tabela de definição de registros.

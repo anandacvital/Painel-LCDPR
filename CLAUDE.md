@@ -92,3 +92,6 @@ Documentar aqui a regra adotada.
   verificação de sigilo no CI; ECharts adiado para a Fase 3.
 - 25/11/2026: arquivo real enviado pela usuária usado só para conferir estrutura
   e apagado da máquina de trabalho; fixtures serão 100% sintéticas.
+- 26/11/2026: repositório público + GitHub Pages gratuito (sem orçamento para plano pago).
+  Consequência: qualquer arquivo versionado fica público na hora; a verificação de
+  sigilo e o .gitignore são a barreira e não podem ser afrouxados.
