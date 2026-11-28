@@ -121,8 +121,13 @@ _Última atualização: 26/11/2026 (Fase 2)_
   Imóveis, Comparativo e Planejamento IRPF num só PDF colorido, cada aba em página nova; modo separado repete as
   abas por produtor. 180 testes.
 
+### Relatório completo: gráficos e quebras (branch `fase-11-relatorio-completo-ajustes`)
+- Gráficos saíam vazios no PDF (animação x impressão imediata): corrigido para todos os relatórios.
+- Menos páginas em branco: as abas de um produtor seguem em sequência; título nunca sozinho no pé da página;
+  mês da tabela mensal volta a aparecer. 180 testes.
+
 ## Em andamento
-- PRs dos tooltips em pt-BR e do relatório completo.
+- PR dos ajustes do relatório completo.
 
 ## Pendências / dúvidas para a Ananda
 - Cópia do TXT real ainda na biblioteca de arquivos do projeto (aguardando "pode apagar").

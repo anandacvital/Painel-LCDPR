@@ -23,19 +23,21 @@ function dados(separado: boolean) {
 }
 
 describe('relatório completo', () => {
-  it('tem todas as abas menos o Detalhamento, cada uma em página nova', () => {
+  it('tem todas as abas menos o Detalhamento; página nova só no Comparativo e no Planejamento', () => {
     const html = htmlRelatorioCompleto(dados(false));
     for (const aba of ['executiva', 'fluxo', 'receitas', 'imoveis', 'comparativo']) expect(html).toContain(`data-aba-impressa="${aba}"`);
     expect(html).toContain('Planejamento IRPF');
     expect(html).toContain('Resultado real x 20% da receita bruta');
     expect(html).not.toContain('Detalhamento</h2>');
-    // 6 títulos de seção (4 abas + Comparativo + Planejamento) → 5 quebras de página.
-    expect(html.match(/rel-titulo-aba rel-nova-pagina/g)).toHaveLength(5);
+    // As 4 abas do período seguem em sequência; Comparativo e Planejamento abrem página.
+    expect(html.match(/rel-titulo-aba rel-nova-pagina/g)).toHaveLength(2);
   });
 
   it('modo separado: as abas por período se repetem para cada produtor', () => {
     const html = htmlRelatorioCompleto(dados(true));
     expect(html.match(/data-aba-impressa="executiva"/g)).toHaveLength(2);
     expect(html.match(/data-aba-impressa="comparativo"/g)).toHaveLength(1);
+    // Cada produtor começa em página nova (o 2º), mais Comparativo e Planejamento.
+    expect(html.match(/rel-titulo-aba rel-nova-pagina/g)).toHaveLength(3);
   });
 });

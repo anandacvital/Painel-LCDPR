@@ -333,7 +333,15 @@ export function imprimir(html: string, tituloDocumento: string, depois?: (area: 
     window.removeEventListener('afterprint', limpar);
   };
   window.addEventListener('afterprint', limpar);
-  window.print();
+  // Espera o navegador DESENHAR os gráficos antes de abrir a impressão. Sem isso o
+  // PDF saía com os eixos e sem as barras/linhas (o desenho ainda não tinha acontecido;
+  // problema relatado pela Ananda em 28/11/2026). Dois quadros + uma pausa curta.
+  const temGraficos = area.querySelector('[data-grafico]') !== null;
+  if (!temGraficos) {
+    window.print();
+    return;
+  }
+  requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => window.print(), 250)));
 }
 
 /** Nome de arquivo seguro: só letras, números e hífen. */
