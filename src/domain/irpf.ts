@@ -162,7 +162,8 @@ export function calcularIrpf(e: EntradaIrpf): ResultadoIrpf {
   // mesmo imposto quando ambas ficam na faixa isenta).
   let maisVantajosa: ResultadoIrpf['maisVantajosa'] = 'real';
   if (cabivel && presumido.impostoEstimado < real.impostoEstimado) maisVantajosa = 'presumido';
-  else if (cabivel && presumido.impostoEstimado === real.impostoEstimado) maisVantajosa = 'empate';
+  // Mesmo imposto: com prejuízo acumulado o real vence (os 20% fariam perder o saldo, art. 16).
+  else if (cabivel && presumido.impostoEstimado === real.impostoEstimado && prejuizoAnterior === 0) maisVantajosa = 'empate';
   const economiaNoAno = Math.abs(real.impostoEstimado - presumido.impostoEstimado) * (cabivel ? 1 : 0);
 
   const insights: string[] = [];
@@ -179,6 +180,15 @@ export function calcularIrpf(e: EntradaIrpf): ResultadoIrpf {
       insights.push(
         `Atenção: optar pelos 20% faz perder TODO o prejuízo de anos anteriores (${fmt(prejuizoAnterior)}), inclusive o que sobraria para os próximos anos (${fmt(futuro)}), conforme a Lei nº 8.023/1990, art. 16, parágrafo único. Compare a economia do ano com o valor futuro desse prejuízo antes de decidir.`,
       );
+    }
+  } else if (cabivel && presumido.impostoEstimado === real.impostoEstimado) {
+    // Bases diferentes, mesmo imposto (ex.: as duas na faixa isenta): a escolha
+    // decide o prejuízo. Pelo resultado real o saldo de prejuízo é preservado.
+    insights.push(
+      `As duas opções dão o mesmo imposto estimado (${fmt(real.impostoEstimado)}): base de ${fmt(real.base)} pelo resultado real e de ${fmt(presumido.base)} pelos 20% da receita bruta (Lei nº 8.023/1990, arts. 4º e 5º).${prejuizoAnterior > 0 ? ` Prefira o resultado real: a opção pelos 20% faria perder o prejuízo acumulado de ${fmt(prejuizoAnterior)} (art. 16, parágrafo único).` : ''}`,
+    );
+    if (compensado > 0) {
+      insights.push(`Pelo resultado real, são compensados ${fmt(compensado)} de prejuízos anteriores (Lei nº 8.023/1990, art. 14).`);
     }
   } else {
     insights.push(

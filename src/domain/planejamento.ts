@@ -77,6 +77,8 @@ export interface LinhaPrejuizo {
   /** Prejuízo gerado no próprio ano (resultado negativo). */
   gerado: Centavos;
   saldoFinal: Centavos;
+  /** O arquivo do ano informa a opção pelos 20% (0010, FORMA_APUR = 2): o saldo anterior foi perdido. */
+  opcao20: boolean;
 }
 
 export interface CadeiaPrejuizo {
@@ -88,18 +90,26 @@ export interface CadeiaPrejuizo {
 }
 
 /**
- * Encadeia o saldo de prejuízo pelos anos ANTERIORES ao planejado, supondo
- * apuração pelo resultado real nesses anos.
+ * Encadeia o saldo de prejuízo pelos anos ANTERIORES ao planejado. Cada ano é
+ * apurado pelo resultado real, SALVO quando o próprio LCDPR daquele ano informa a
+ * opção pelos 20% da receita bruta (registro 0010, FORMA_APUR = 2): nesse ano o
+ * saldo acumulado é perdido (Lei nº 8.023/1990, art. 16, parágrafo único).
  */
-export function encadearPrejuizo(resultados: readonly { ano: number; resultado: Centavos }[], saldoInicial: Centavos, anoPlanejado: number): CadeiaPrejuizo {
+export function encadearPrejuizo(
+  resultados: readonly { ano: number; resultado: Centavos; opcao20?: boolean }[],
+  saldoInicial: Centavos,
+  anoPlanejado: number,
+): CadeiaPrejuizo {
   const anteriores = [...resultados].filter((r) => r.ano < anoPlanejado).sort((a, b) => a.ano - b.ano);
   let saldo = Math.max(0, saldoInicial);
   const linhas: LinhaPrejuizo[] = [];
   for (const r of anteriores) {
-    const compensado = r.resultado > 0 ? Math.min(saldo, r.resultado) : 0;
+    // A opção pelos 20% só existe com resultado positivo (art. 5º); com prejuízo, o ano segue pelo real.
+    const opcao20 = !!r.opcao20 && r.resultado > 0;
+    const compensado = r.resultado > 0 && !opcao20 ? Math.min(saldo, r.resultado) : 0;
     const gerado = r.resultado < 0 ? -r.resultado : 0;
-    const saldoFinal = saldo - compensado + gerado;
-    linhas.push({ ano: r.ano, saldoInicial: saldo, resultado: r.resultado, compensado, gerado, saldoFinal });
+    const saldoFinal = opcao20 ? 0 : saldo - compensado + gerado;
+    linhas.push({ ano: r.ano, saldoInicial: saldo, resultado: r.resultado, compensado, gerado, saldoFinal, opcao20 });
     saldo = saldoFinal;
   }
   const lacunas: number[] = [];
@@ -177,7 +187,7 @@ export function planejarProdutor(arquivos: readonly ArquivoLcdpr[], ano: number,
   // Prejuízo: anos anteriores carregados, cada um pelo seu resultado realizado.
   const resultados = arquivos
     .filter((a) => a.anoBase !== null && a.anoBase < ano)
-    .map((a) => ({ ano: a.anoBase!, resultado: totalizar(a.lancamentos).resultado }));
+    .map((a) => ({ ano: a.anoBase!, resultado: totalizar(a.lancamentos).resultado, opcao20: a.formaApuracao === '2' }));
   const prejuizo = encadearPrejuizo(resultados, o.prejuizoInicial ?? 0, ano);
 
   const entrada: EntradaIrpf = { receitaBruta, despesas, prejuizoAnterior: prejuizo.saldoNoInicio, ano };

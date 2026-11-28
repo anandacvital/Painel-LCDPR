@@ -213,7 +213,13 @@ export function montarVisao(
   const cpfsAtuais = new Set(atual.arquivos.map((a) => a.abertura?.cpf ?? ''));
 
   // Ponto de corte: prévia (ano civil, por dia) ou último mês carregado (safra/livre).
-  const previa = civil ? detectarPrevia(atual.presentes.flatMap((x) => x.r!.arquivos)) : null;
+  // Com vários produtores, se ALGUM arquivo do ano vai até dezembro, a visão não é
+  // prévia (senão os meses seriam cortados e não bateriam com os totais); os
+  // produtores com arquivo parcial ganham um aviso.
+  const arquivosAno = atual.presentes.flatMap((x) => x.r!.arquivos);
+  const previasAno = arquivosAno.filter((a) => detectarPrevia([a]) !== null);
+  const algumCompleto = previasAno.length < arquivosAno.length;
+  const previa = civil && !algumCompleto ? detectarPrevia(arquivosAno) : null;
   const diaMes = previa?.fim.slice(5);
   const ultimoMes = civil ? (previa ? previa.fim.slice(0, 7) : periodo.fim) : (atual.ultimoCoberto < periodo.fim ? atual.ultimoCoberto : periodo.fim);
   const mesesPeriodo = mesesEntre(periodo.inicio, ultimoMes);
@@ -234,6 +240,12 @@ export function montarVisao(
   const nomes = atual.arquivos.map((a) => a.abertura?.nome ?? a.nomeArquivo);
 
   const avisosPeriodo = [...atual.faltando];
+  if (civil && algumCompleto) {
+    for (const a of previasAno) {
+      const fim = a.abertura?.dtFin?.iso.split('-').reverse().join('/') ?? '?';
+      avisosPeriodo.push(`${a.abertura?.nome ?? a.nomeArquivo} tem só a prévia de ${ano} (lançamentos até ${fim}), enquanto os demais produtores vão até dezembro: a comparação com o ano anterior considera o ano inteiro.`);
+    }
+  }
   if (!civil && ultimoMes < periodo.fim) {
     avisosPeriodo.unshift(`Os arquivos carregados vão só até ${nomeMes(ultimoMes)} de ${ultimoMes.slice(0, 4)}: o período foi cortado nesse mês${ant ? ', e a comparação usa o mesmo corte' : ''}.`);
   }

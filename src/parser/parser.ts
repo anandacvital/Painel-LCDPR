@@ -13,6 +13,7 @@
  */
 import { lerCentavos } from '../domain/dinheiro';
 import { lerData, type DataLcdpr } from '../domain/datas';
+import { ehCnpjAlfanumerico } from '../domain/documentos';
 import { dividirLinhas, type Codificacao } from './encoding';
 import { ehRegistroConhecido, LEIAUTE, type CodigoRegistro, type DefinicaoRegistro } from './leiaute';
 import type { ArquivoLcdpr, Ocorrencia } from './modelo';
@@ -39,6 +40,9 @@ class Linha {
 
 const SINAL: Record<string, 1 | -1> = { P: 1, N: -1 };
 
+/** Campos que guardam CPF ou CNPJ (aceitam o CNPJ alfanumérico com alerta). */
+const CAMPOS_CPF_CNPJ = new Set(['ID_PARTIC', 'ID_CONTRAPARTE', 'IDENT_CPF_CNPJ']);
+
 /** Converte percentual "05000" (2 decimais implícitos) em centésimos: 5000 = 50,00%. */
 function lerPercentual(texto: string): number | null {
   return /^\d+$/.test(texto) ? Number(texto) : null;
@@ -50,7 +54,19 @@ export function lerLcdpr(texto: string, nomeArquivo: string, codificacao: Codifi
     ocorrencias.push(o);
   };
 
-  const linhas = dividirLinhas(texto);
+  const todas = dividirLinhas(texto);
+  // Linhas em branco DEPOIS do 9999 (comum quando o arquivo passa por um editor):
+  // um único alerta, e elas não entram na contagem do QTD_LIN.
+  let fimUtil = todas.length;
+  while (fimUtil > 0 && todas[fimUtil - 1]!.trim() === '') fimUtil--;
+  const linhas = todas.slice(0, fimUtil);
+  if (fimUtil < todas.length && fimUtil > 0) {
+    add({
+      severidade: 'alerta', categoria: 'Estrutura', regra: 'LINHA-VAZIA-FINAL', linha: fimUtil + 1, registro: null, campo: null,
+      problema: `${todas.length - fimUtil === 1 ? 'Há 1 linha em branco' : `Há ${todas.length - fimUtil} linhas em branco`} depois da última linha do arquivo.`,
+      comoCorrigir: 'Apague as linhas em branco do fim do arquivo. O painel não as contou no QTD_LIN, mas o PVA da Receita pode rejeitar o arquivo.',
+    });
+  }
   const arquivo: ArquivoLcdpr = {
     nomeArquivo,
     codificacao,
@@ -68,6 +84,8 @@ export function lerLcdpr(texto: string, nomeArquivo: string, codificacao: Codifi
   };
 
   const contagem = new Map<CodigoRegistro, number>();
+  /** Código do último 0040 lido: o 0045 é "filho" e deve vir logo depois do seu 0040. */
+  let ultimo0040: string | null = null;
   let maiorOrdem = -1;
   let registroDaMaiorOrdem = '';
 
@@ -164,6 +182,17 @@ export function lerLcdpr(texto: string, nomeArquivo: string, codificacao: Codifi
         }
         return;
       }
+      if (c.tipo === 'N' && CAMPOS_CPF_CNPJ.has(c.nome) && ehCnpjAlfanumerico(v)) {
+        // CNPJ alfanumérico (IN RFB nº 2.229/2024, emitido a partir de julho de 2026):
+        // o leiaute 1.3 do LCDPR define o campo como numérico, mas o documento é
+        // válido. O lançamento continua nos cálculos; a pessoa confere se o PVA aceita.
+        add({
+          ...base, severidade: 'alerta', regra: 'CNPJ-ALFANUMERICO',
+          problema: `O campo ${c.nome} traz um CNPJ alfanumérico (${v}), com dígito verificador válido. O leiaute 1.3 do LCDPR prevê só algarismos.`,
+          comoCorrigir: 'O CNPJ alfanumérico existe desde julho de 2026 (IN RFB nº 2.229/2024). Confira no site da Receita se o PVA e o leiaute vigentes do LCDPR já o aceitam antes de transmitir; o painel manteve o lançamento nos cálculos.',
+        });
+        return;
+      }
       if (c.tipo === 'N' && !/^\d+$/.test(v)) {
         add({
           ...base, severidade: 'erro', regra: 'CAMPO-NUMERICO',
@@ -249,6 +278,7 @@ export function lerLcdpr(texto: string, nomeArquivo: string, codificacao: Codifi
         arquivo.cadastro = { linha: numero, uf: l.txt('UF'), codMun: l.txt('COD_MUN') };
         break;
       case '0040':
+        ultimo0040 = l.txt('COD_IMOVEL');
         arquivo.imoveis.push({
           linha: numero,
           codigo: l.txt('COD_IMOVEL'),
@@ -266,6 +296,15 @@ export function lerLcdpr(texto: string, nomeArquivo: string, codificacao: Codifi
         });
         break;
       case '0045':
+        if (l.txt('COD_IMOVEL') !== ultimo0040) {
+          add({
+            severidade: 'alerta', categoria: 'Estrutura', regra: 'HIERARQUIA-0045', linha: numero, registro: reg, campo: 'COD_IMOVEL',
+            problema: ultimo0040 === null
+              ? 'Registro 0045 antes de qualquer 0040.'
+              : `O 0045 do imóvel ${l.txt('COD_IMOVEL')} vem depois do 0040 do imóvel ${ultimo0040}.`,
+            comoCorrigir: 'O 0045 é registro "filho" do 0040: os terceiros de cada imóvel devem vir logo abaixo do 0040 daquele imóvel (Manual, hierarquia dos registros).',
+          });
+        }
         arquivo.terceiros.push({
           linha: numero,
           codImovel: l.txt('COD_IMOVEL'),

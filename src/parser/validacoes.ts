@@ -15,6 +15,9 @@ import { formatarReais, type Centavos } from '../domain/dinheiro';
 import { diaNaoUtil, formatarDataIso, formatarMesIso } from '../domain/datas';
 import { cpfOuCnpjValido, cpfValido, formatarCpfCnpj } from '../domain/documentos';
 import { CONTA_ESPECIE, CONTA_NAO_BANCARIA, IMOVEL_RATEIO, TIPO_LANC } from './leiaute';
+
+/** COD_VER do leiaute 1.3 do LCDPR (o conferido em leiaute.ts). */
+const VERSAO_LEIAUTE = '0013';
 import type { ArquivoLcdpr, Lancamento, Ocorrencia } from './modelo';
 
 type Add = (o: Ocorrencia) => void;
@@ -107,11 +110,49 @@ function validarIntegridade(a: ArquivoLcdpr, add: Add): void {
         });
       }
     }
-    if (ab.sitEspecial === '1' && !ab.dtSitEsp) {
+    // DT_SIT_ESP acompanha a situação especial: com falecimento ou saída definitiva
+    // do País, a data do evento define o fim do período (erro se faltar); no espólio,
+    // alerta. Data preenchida sem situação especial também é inconsistência.
+    if (ab.sitEspecial && ab.sitEspecial !== '0' && !ab.dtSitEsp) {
+      const evento = { '1': 'falecimento', '2': 'espólio', '3': 'saída definitiva do País' }[ab.sitEspecial] ?? `código ${ab.sitEspecial}`;
       add({
-        severidade: 'erro', categoria: 'Integridade', regra: 'SIT-ESPECIAL', linha: ab.linha, registro: '0000', campo: 'DT_SIT_ESP',
-        problema: 'Situação especial "falecimento" sem a data do evento.',
-        comoCorrigir: 'Informe DT_SIT_ESP (data do falecimento).',
+        severidade: ab.sitEspecial === '2' ? 'alerta' : 'erro', categoria: 'Integridade', regra: 'SIT-ESPECIAL', linha: ab.linha, registro: '0000', campo: 'DT_SIT_ESP',
+        problema: `Situação especial "${evento}" sem a data do evento (DT_SIT_ESP).`,
+        comoCorrigir: 'Informe DT_SIT_ESP com a data da situação especial (Manual, registro 0000).',
+      });
+    }
+    if (ab.sitEspecial === '0' && ab.dtSitEsp) {
+      add({
+        severidade: 'alerta', categoria: 'Integridade', regra: 'SIT-ESPECIAL', linha: ab.linha, registro: '0000', campo: 'DT_SIT_ESP',
+        problema: `DT_SIT_ESP preenchida (${formatarDataIso(ab.dtSitEsp.iso)}) sem situação especial (SIT_ESPECIAL = 0).`,
+        comoCorrigir: 'Deixe DT_SIT_ESP vazia quando não houver situação especial, ou informe o código correto em SIT_ESPECIAL.',
+      });
+    }
+    if (ab.sitEspecial && ab.sitEspecial !== '0' && ab.dtSitEsp && ab.dtFin && ab.dtSitEsp.iso > ab.dtFin.iso) {
+      add({
+        severidade: 'alerta', categoria: 'Integridade', regra: 'SIT-ESPECIAL', linha: ab.linha, registro: '0000', campo: 'DT_SIT_ESP',
+        problema: `A data da situação especial (${formatarDataIso(ab.dtSitEsp.iso)}) é posterior ao fim do período (${formatarDataIso(ab.dtFin.iso)}).`,
+        comoCorrigir: 'Confira DT_SIT_ESP e DT_FIN: o período escriturado não deve passar da data do evento.',
+      });
+    }
+    // Versão do leiaute: o painel confere a tabela do leiaute 1.3 (COD_VER "0013").
+    if (ab.codVersao && ab.codVersao !== VERSAO_LEIAUTE) {
+      add({
+        severidade: 'alerta', categoria: 'Estrutura', regra: 'VERSAO-LEIAUTE', linha: ab.linha, registro: '0000', campo: 'COD_VER',
+        problema: `O arquivo informa a versão de leiaute "${ab.codVersao}"; o painel confere pela versão 1.3 ("${VERSAO_LEIAUTE}").`,
+        comoCorrigir: 'Confira no site da Receita a versão vigente do leiaute do LCDPR e se o sistema gerador está atualizado.',
+      });
+    }
+  }
+
+  // ---- 0010: opção pelos 20% só com resultado positivo (Lei nº 8.023/1990, art. 5º) ----
+  if (a.formaApuracao === '2' && a.lancamentos.length > 0) {
+    const resultado = a.lancamentos.reduce((s, l) => s + (ehReceita(l) ? l.entrada - l.saida : l.tipoLanc === '2' ? l.entrada - l.saida : 0), 0);
+    if (resultado <= 0) {
+      add({
+        severidade: 'alerta', categoria: 'Integridade', regra: 'FORMA-APURACAO', linha: null, registro: '0010', campo: 'FORMA_APUR',
+        problema: `Forma de apuração "2" (20% da receita bruta) com resultado do ano ${resultado === 0 ? 'nulo' : `negativo (${formatarReais(resultado)})`}.`,
+        comoCorrigir: 'A opção pelos 20% só limita resultado POSITIVO (Lei nº 8.023/1990, art. 5º). Com prejuízo, apure pelo Livro Caixa (forma 1) para não perder o prejuízo a compensar (art. 14 e art. 16, parágrafo único).',
       });
     }
   }
@@ -160,6 +201,20 @@ function validarIntegridade(a: ArquivoLcdpr, add: Add): void {
         severidade: 'erro', categoria: 'Integridade', regra: 'TERCEIRO-AUSENTE', linha: im.linha, registro: '0040', campo: null,
         problema: `Imóvel ${im.codigo} com participação de ${im.participacao !== null ? pct(im.participacao) : '?'} ou exploração não individual, mas sem nenhum 0045.`,
         comoCorrigir: 'Cadastre no 0045 os condôminos, parceiros, arrendadores ou comodantes do imóvel.',
+      });
+    }
+  }
+
+  // ---- Condomínio: a soma das partes não passa de 100% ----------------------------------
+  for (const im of a.imoveis) {
+    if (im.tipoExploracao !== '2' || im.participacao === null) continue;
+    const condominos = a.terceiros.filter((t) => t.codImovel === im.codigo && t.tipoContraparte === '1' && t.percentual !== null);
+    const soma = im.participacao + condominos.reduce((s, t) => s + (t.percentual ?? 0), 0);
+    if (condominos.length > 0 && soma > 10000) {
+      add({
+        severidade: 'alerta', categoria: 'Integridade', regra: 'SOMA-PARTICIPACAO', linha: im.linha, registro: '0040', campo: 'PARTICIPACAO',
+        problema: `No condomínio do imóvel ${im.codigo}, a participação do produtor (${pct(im.participacao)}) mais a dos condôminos do 0045 soma ${pct(soma)}, acima de 100%.`,
+        comoCorrigir: 'Confira os percentuais do contrato ou da matrícula: cada condômino escritura só a sua parte (Lei nº 8.023/1990, art. 13).',
       });
     }
   }
