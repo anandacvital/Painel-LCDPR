@@ -182,7 +182,7 @@ function blocoPrejuizo(p: PlanoProdutor, analises: readonly ResultadoAnalise[], 
   const primeiro = primeiroAno(analises, p.cpf) ?? p.ano;
   const r = p.irpf;
   const linhas = [
-    ...p.prejuizo.linhas.map((l) => ({ ...l, rotulo: String(l.ano) })),
+    ...p.prejuizo.linhas.map((l) => ({ ...l, rotulo: `${l.ano}${l.opcao20 ? ' (opção 20%: saldo perdido)' : ''}` })),
     {
       rotulo: `${p.ano}${p.usaProjecao ? ' (projetado)' : ''}`,
       saldoInicial: p.prejuizo.saldoNoInicio,
@@ -204,7 +204,7 @@ function blocoPrejuizo(p: PlanoProdutor, analises: readonly ResultadoAnalise[], 
           <tbody>${linhas.map((l) => `<tr><td>${esc(l.rotulo)}</td><td class="num">${formatarReais(l.saldoInicial)}</td><td class="num ${l.resultado < 0 ? 'negativo' : ''}">${formatarReais(l.resultado)}</td><td class="num">${formatarReais(l.compensado)}</td><td class="num">${formatarReais(l.saldoFinal)}</td></tr>`).join('')}</tbody>
         </table>
       </div>
-      <p class="ajuda">Considera que nos anos anteriores a apuração foi pelo resultado real. Se em algum ano a opção foi pelos 20%, o saldo daquele ano em diante é zero (art. 16, parágrafo único): ajuste o valor acima. O saldo final de ${esc(String(p.ano))} vale se a apuração deste ano for pelo resultado real.</p>
+      <p class="ajuda">Considera que nos anos anteriores a apuração foi pelo resultado real, salvo quando o próprio LCDPR do ano informa a opção pelos 20% (registro 0010): aí o saldo acumulado é perdido (art. 16, parágrafo único). Se a opção feita na declaração foi diferente da informada no arquivo, confira o saldo com a ficha Atividade Rural da declaração. O saldo final de ${esc(String(p.ano))} vale se a apuração deste ano for pelo resultado real.</p>
       ${p.prejuizo.lacunas.length ? `<p class="plano-alerta">${iconeAlerta}Faltam no painel os anos ${p.prejuizo.lacunas.join(', ')}: o saldo pode estar incompleto.</p>` : ''}
     </div>`;
 }

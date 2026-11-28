@@ -1,6 +1,6 @@
 # PROGRESS.md — andamento do Painel LCDPR
 
-_Última atualização: 28/11/2026 (importar do Google Drive)_
+_Última atualização: 28/11/2026 (revisão geral)_
 
 ## Feito
 ### Fase 0 — Fundação (PR #1, já na `main`)
@@ -126,19 +126,6 @@ _Última atualização: 28/11/2026 (importar do Google Drive)_
 - Menos páginas em branco: as abas de um produtor seguem em sequência; título nunca sozinho no pé da página;
   mês da tabela mensal volta a aparecer. 180 testes.
 
-## Em andamento
-- PR dos ajustes do relatório completo.
-
-## Pendências / dúvidas para a Ananda
-- Cópia do TXT real ainda na biblioteca de arquivos do projeto (aguardando "pode apagar").
-- Lei nº 9.250/1995, art. 18: texto não conferido (fonte indisponível).
-
-## Próximos passos
-- Conferir os nomes dos campos da ficha com o programa IRPF do exercício (podem mudar a cada ano).
-- Área e produção (R$/ha, R$/saca): virão do sistema Vértice no futuro.
-- Cadastrar a tabela progressiva de cada novo ano em `TABELAS_ANUAIS` (`domain/irpf.ts`).
-- Tributação mínima de altas rendas (Lei 15.270/2025) não é calculada: só alertada.
-
 ### Importar do Google Drive (branch `fase-12-google-drive`)
 - Botão "Importar do Google Drive" ao lado da área de arrastar, só quando as chaves do Google estão configuradas.
 - Login do Google no navegador (escopo `drive.file`), seletor de arquivos do Google (TXT, todos os arquivos e
@@ -148,3 +135,33 @@ _Última atualização: 28/11/2026 (importar do Google Drive)_
 - Pendente com Ananda: criar o projeto no Google Cloud, cadastrar as 3 Variables e testar com um TXT real
   (o fluxo com o Google de verdade não pôde ser testado aqui, sem as chaves).
 - 188 testes.
+
+### Revisão geral e correções (branch `fase-13-revisao-bugs`)
+- Teste automático no navegador: todas as abas x ano civil, safra e período livre x produtores x critérios de
+  consolidação x todos os relatórios (sem nenhum erro de tela); 327 tooltips conferidos (todos em R$ pt-BR).
+- Corrigido: PDF do Relatório completo com gráficos invadindo o cartão vizinho (tabela mensal larga fazia o Chrome
+  reduzir a página); KPI de IRPF passando da margem no relatório executivo.
+- Corrigido: alerta "receita perto do limite do LCDPR" somava todos os produtores (a obrigação é por CPF).
+- Corrigido: prejuízo encadeado ignorava a opção pelos 20% informada no 0010 dos anos anteriores.
+- Corrigido: empate entre real e 20% mostrava texto errado; com prejuízo acumulado o real é o indicado.
+- Corrigido: título de sazonalidade dizia "3 meses" quando a receita entrou em 1 ou 2 meses.
+- Corrigido: produtor em prévia + outro completo no mesmo ano cortava os meses (gráfico não batia com o total).
+- Corrigido: filtro de mês ficava preso ao mudar o período livre; mensagem de arquivos lidos/falhos e aviso de
+  arquivo que não é LCDPR.
+- Validador: novas regras (linhas em branco no fim, hierarquia 0045, situação especial, versão do leiaute,
+  20% com prejuízo, condomínio acima de 100%, CNPJ alfanumérico). 197 testes.
+
+## Em andamento
+- PR da revisão geral (fase 13).
+
+## Pendências / dúvidas para a Ananda
+- CNPJ alfanumérico: confirmar se o PVA/leiaute vigente do LCDPR já aceita (o painel só alerta).
+- DT_SIT_ESP no espólio: o painel trata como alerta; conferir no Manual se é obrigatório.
+- Cópia do TXT real ainda na biblioteca de arquivos do projeto (aguardando "pode apagar").
+- Lei nº 9.250/1995, art. 18: texto não conferido (fonte indisponível).
+
+## Próximos passos
+- Conferir os nomes dos campos da ficha com o programa IRPF do exercício (podem mudar a cada ano).
+- Área e produção (R$/ha, R$/saca): virão do sistema Vértice no futuro.
+- Cadastrar a tabela progressiva de cada novo ano em `TABELAS_ANUAIS` (`domain/irpf.ts`).
+- Tributação mínima de altas rendas (Lei 15.270/2025) não é calculada: só alertada.

@@ -54,6 +54,7 @@ export function dadosAlertas(v: Visao): EntradaAlertas {
     imoveis,
     anoCivil: v.periodo.tipo === 'ano' ? { ano: v.ano, previaAteMes: v.previa?.ateMes ?? null } : null,
     formatarDoc: formatarCpfCnpj,
+    nomeProdutor: (cpf) => v.arquivos.find((a) => a.abertura?.cpf === cpf)?.abertura?.nome ?? formatarCpfCnpj(cpf),
   };
 }
 

@@ -46,10 +46,14 @@ export function tituloFluxoCaixa(meses: readonly TotalMensal[], t: TermosPeriodo
 export function tituloSazonalidade(meses: readonly TotalMensal[], t: TermosPeriodo = ANO): string {
   const total = meses.reduce((s, m) => s + Math.max(0, m.receitas), 0);
   if (total <= 0) return `Sem receitas ${t.no}`;
-  const ordenados = [...meses].sort((a, b) => b.receitas - a.receitas);
+  // Só meses que tiveram receita: com receita em 1 ou 2 meses, a frase diz isso (e não "3 meses").
+  const ordenados = meses.filter((m) => m.receitas > 0).sort((a, b) => b.receitas - a.receitas);
   const top3 = ordenados.slice(0, 3);
-  const parte = top3.reduce((s, m) => s + Math.max(0, m.receitas), 0) / total;
-  return `${pct(parte)} da receita ${t.do} entrou em 3 meses: ${top3.map((m) => nomeMes(m.mes)).join(', ')}`;
+  const parte = top3.reduce((s, m) => s + m.receitas, 0) / total;
+  const nomes = top3.map((m) => nomeMes(m.mes));
+  if (top3.length === 1) return `Toda a receita ${t.do} entrou em ${nomes[0]}`;
+  const quando = top3.length === 2 ? `2 meses: ${nomes.join(' e ')}` : `3 meses: ${nomes.join(', ')}`;
+  return `${pct(parte)} da receita ${t.do} entrou em ${quando}`;
 }
 
 export function tituloConcentracao(grupos: readonly TotalPorChave[], campo: 'receitas' | 'despesas', rotulo: string): string {

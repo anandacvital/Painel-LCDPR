@@ -319,6 +319,11 @@ export function montarPainel(raiz: HTMLElement, analises: readonly ResultadoAnal
       if (sel === 'ate' && /^\d{4}-\d{2}$/.test(s.value)) p.ate = s.value;
       // Mudou o recorte: o filtro cruzado anterior pode não existir mais.
       if (sel === 'produtor' || sel === 'ano' || sel === 'tipo-periodo' || sel === 'safra' || sel === 'inicio-safra') estado.filtro = {};
+      // Período livre: um filtro de mês que ficou fora dos novos meses zeraria o painel.
+      if ((sel === 'de' || sel === 'ate') && estado.filtro.mes) {
+        const [ini, fim] = [p.de ?? '', p.ate ?? ''].sort();
+        if (estado.filtro.mes < ini! || estado.filtro.mes > fim!) delete estado.filtro.mes;
+      }
       redesenhar();
     });
   });

@@ -90,7 +90,12 @@
   margin: 6pt 0 8pt;
 }
 .rel-kpis-5 {
-  grid-template-columns: repeat(5, 1fr);
+  /* minmax(0, 1fr): a coluna não cresce com o valor (senão a 5ª passava da margem do A4). */
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 5pt;
+}
+.rel-kpis-5 .rel-kpi {
+  padding: 5pt 5pt;
 }
 .rel-kpi {
   display: flex;
@@ -111,6 +116,10 @@
   font-family: var(--fonte-numero);
   font-size: 11pt;
   white-space: nowrap;
+}
+.rel-kpis-5 .rel-kpi strong {
+  font-size: 9pt;
+  letter-spacing: -0.02em;
 }
 .rel-kpis:not(.rel-kpis-5) .rel-kpi strong {
   font-size: 18pt;
@@ -462,4 +471,27 @@
 }
 .rel-inicio-aba {
   break-inside: avoid;
+}
+
+/*
+ * NADA PODE PASSAR DA LARGURA ÚTIL DO A4 (182 mm) nos relatórios com abas do Painel.
+ * Se uma tabela passa, o navegador reduz a página inteira para caber: o layout fica
+ * mais largo que o da hora em que os gráficos foram desenhados, as grades viram duas
+ * colunas e os gráficos (com largura fixa) invadem o cartão vizinho. Bug do Relatório
+ * completo encontrado na revisão de 28/11/2026 (tabela mensal de Receitas & Despesas).
+ */
+.painel-impresso .tabela {
+  font-size: 7.5pt;
+}
+.painel-impresso .tabela th,
+.painel-impresso .tabela td {
+  padding: 3pt 4pt;
+}
+.painel-impresso .tabela th {
+  font-size: 6.5pt;
+  letter-spacing: 0;
+}
+/* Mesma grade na tela (quando o gráfico é desenhado) e no papel: uma coluna. */
+.painel-impresso .duas-colunas {
+  grid-template-columns: 1fr;
 }

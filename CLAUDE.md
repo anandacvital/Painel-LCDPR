@@ -229,3 +229,13 @@ LCDPR, perguntas 47 e 52; Lei nº 8.023/1990, art. 13). Por isso o critério pad
 - 28/11/2026: Ananda liberou a importação pelo Google Drive (Picker + OAuth no navegador, escopo drive.file).
   Ela cria o projeto gratuito no Google Cloud (passo a passo em `docs/google-drive.md`). Risco avisado: o
   administrador do Workspace pode precisar marcar o app como confiável.
+- 28/11/2026: revisão geral (fase 13). Regras novas no Validador (todas ALERTA, salvo indicado): linhas em branco depois
+  do 9999 (não contam no QTD_LIN); 0045 fora da hierarquia (logo abaixo do seu 0040); DT_SIT_ESP obrigatória com
+  situação especial (erro para falecimento e saída do País; alerta no espólio) e vazia sem ela; COD_VER ≠ "0013";
+  FORMA_APUR 2 com resultado ≤ 0 (art. 5º só vale para resultado positivo); condomínio com produtor + condôminos > 100%;
+  CNPJ ALFANUMÉRICO (IN RFB 2.229/2024) com DV válido = alerta e o lançamento segue nos cálculos (leiaute 1.3 diz "N":
+  conferir se o PVA aceita). Prejuízo encadeado: ano anterior com FORMA_APUR 2 e lucro ZERA o saldo (art. 16, par. único).
+  Empate de imposto com prejuízo acumulado = vence o resultado real. Alerta de obrigatoriedade do LCDPR é POR CPF (antes
+  somava os produtores). Ano com um produtor em prévia e outro completo: a visão não é prévia (aviso por produtor).
+  Impressão: nada pode passar dos 182 mm úteis do A4 (senão o Chrome reduz a página e os gráficos invadem o vizinho);
+  no relatório completo `.duas-colunas` vira uma coluna e os 5 KPIs usam `minmax(0, 1fr)`.
