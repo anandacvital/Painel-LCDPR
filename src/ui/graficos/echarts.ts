@@ -105,7 +105,11 @@ export function opcoesFinais(opcao: echarts.EChartsCoreOption): echarts.EChartsC
 export function desenharGrafico(el: HTMLElement, opcao: echarts.EChartsCoreOption): echarts.ECharts {
   echarts.getInstanceByDom(el)?.dispose();
   const g = echarts.init(el, undefined, { renderer: 'svg' });
-  g.setOption(opcoesFinais(opcao));
+  // Na área de impressão, sem animação: o gráfico precisa estar completo na hora do PDF
+  // (com animação as barras "crescem" a partir do zero e o PDF pegava o gráfico vazio).
+  const naImpressao = el.closest('#area-impressao') !== null;
+  g.setOption(naImpressao ? { ...opcoesFinais(opcao), animation: false } : opcoesFinais(opcao));
+  if (naImpressao) g.getZr().refreshImmediately();
   ativos.add(g);
   return g;
 }

@@ -206,3 +206,8 @@ LCDPR, perguntas 47 e 52; Lei nº 8.023/1990, art. 13). Por isso o critério pad
   impressão (`report/completo.ts`). As abas são desenhadas pelas MESMAS funções da tela dentro da área de impressão
   (botões/campos escondidos por `.painel-impresso`; blocos recolhidos saem abertos); Planejamento usa
   `corpoPlanejamento`. Período e filtro valem como na tela; Comparativo e Planejamento sempre ano civil sem filtro.
+- 28/11/2026: PDF do Relatório completo saiu com gráficos VAZIOS (só eixos) e quebras ruins. Causa: animação do ECharts
+  + `window.print()` imediato (o PDF pegava as barras no início da animação; afetava TODOS os relatórios com gráfico).
+  Correção: gráfico na área de impressão sem animação + `refreshImmediately`, e `imprimir()` espera 2 quadros + 250 ms
+  quando há gráficos. Relatório completo: página nova só por produtor, Comparativo e Planejamento; título da aba preso
+  ao primeiro bloco (`.rel-inicio-aba`); nomes de mês da tabela mensal viram texto; frases "Clique..." removidas.

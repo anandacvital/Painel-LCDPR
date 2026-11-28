@@ -54,7 +54,7 @@ export interface DadosCompleto {
   simulacao: DadosSimulacao;
 }
 
-/** Título de seção: começa sempre em página nova (menos a primeira). */
+/** Título de seção (com `novaPagina`, começa em página nova). */
 const titulo = (texto: string, sub: string, novaPagina: boolean): string =>
   `<h2 class="rel-titulo-aba ${novaPagina ? 'rel-nova-pagina' : ''}">${esc(texto)}${sub ? ` <small>${esc(sub)}</small>` : ''}</h2>`;
 
@@ -67,12 +67,16 @@ export function htmlRelatorioCompleto(d: DadosCompleto): string {
     primeira = false;
     return n;
   };
+  // Quebra de página só no começo de cada produtor, do Comparativo e do Planejamento.
+  // Dentro de um produtor as abas seguem em sequência (antes cada aba abria página nova
+  // e sobravam meias páginas em branco).
   const porVisao = d.visoes
-    .map((v, i) =>
-      ABAS_VISAO.map(([aba, nome]) => `
-        ${titulo(nome, varios ? v.rotulo : '', nova())}
-        <div class="painel-impresso" data-aba-impressa="${aba}" data-visao="${i}"></div>`).join(''),
-    )
+    .map((v, i) => {
+      const quebra = nova();
+      return ABAS_VISAO.map(([aba, nome], j) => `
+        ${titulo(nome, varios ? v.rotulo : '', j === 0 && quebra)}
+        <div class="painel-impresso" data-aba-impressa="${aba}" data-visao="${i}"></div>`).join('');
+    })
     .join('');
   const ano = d.visaoAno.ano;
   return `
@@ -101,6 +105,34 @@ export function desenharCompleto(area: HTMLElement, d: DadosCompleto): void {
   });
   // No papel não dá para clicar e abrir: blocos recolhidos (ex.: "Tabela mensal") saem abertos.
   area.querySelectorAll<HTMLDetailsElement>('.painel-impresso details:not(.ajuste-naturezas)').forEach((d) => { d.open = true; });
+  // Botões que são TEXTO (ex.: nome do mês na tabela mensal) viram texto simples;
+  // os botões de ação ("Filtrar...", "Ver o mês...") somem.
+  area.querySelectorAll<HTMLButtonElement>('.painel-impresso button').forEach((b) => {
+    if (b.closest('td, th')) b.replaceWith(document.createTextNode(b.textContent ?? ''));
+    else b.remove();
+  });
+  // Instruções de clique não fazem sentido no papel.
+  area.querySelectorAll<HTMLElement>('.painel-impresso .ajuda').forEach((p) => {
+    p.textContent = (p.textContent ?? '').replace(/\s*Clique[^.]*\./g, '').trim();
+    if (!p.textContent) p.remove();
+  });
+  // Título da aba nunca sozinho no pé da página: título + primeiro bloco da aba
+  // ficam juntos numa caixa que não se divide (o navegador ignora "break-after: avoid"
+  // quando o bloco seguinte também não pode ser dividido).
+  area.querySelectorAll<HTMLElement>('.painel-impresso').forEach((caixa) => {
+    const titulo = caixa.previousElementSibling;
+    const primeiro = caixa.firstElementChild;
+    if (!titulo?.classList.contains('rel-titulo-aba') || !primeiro) return;
+    const junto = document.createElement('div');
+    junto.className = 'rel-inicio-aba';
+    // A quebra de página do título passa para a caixa (filho no início de caixa "não dividir" pode perder a quebra).
+    if (titulo.classList.contains('rel-nova-pagina')) {
+      titulo.classList.remove('rel-nova-pagina');
+      junto.classList.add('rel-nova-pagina');
+    }
+    caixa.insertBefore(junto, primeiro);
+    junto.append(titulo, primeiro);
+  });
 }
 
 export function imprimirCompleto(d: DadosCompleto): void {
