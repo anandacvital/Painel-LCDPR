@@ -116,8 +116,13 @@ _Última atualização: 26/11/2026 (Fase 2)_
 - Corrigido: gráficos com tooltip próprio (Comparativo, Imóveis, Receitas & Despesas, Gestão) mostravam centavos
   no padrão americano. Agora todos usam "R$ 1.234,56". 178 testes.
 
+### Relatório completo (branch `fase-10-relatorio-completo`)
+- Nova opção "Relatório completo" em Imprimir relatórios: Visão Executiva, Fluxo de Caixa, Receitas & Despesas,
+  Imóveis, Comparativo e Planejamento IRPF num só PDF colorido, cada aba em página nova; modo separado repete as
+  abas por produtor. 180 testes.
+
 ## Em andamento
-- PR dos tooltips em pt-BR.
+- PRs dos tooltips em pt-BR e do relatório completo.
 
 ## Pendências / dúvidas para a Ananda
 - Cópia do TXT real ainda na biblioteca de arquivos do projeto (aguardando "pode apagar").
