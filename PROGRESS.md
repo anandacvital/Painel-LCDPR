@@ -108,8 +108,12 @@ _Última atualização: 26/11/2026 (Fase 2)_
   valor redondo alto (info, a partir de R$ 10.000,00 múltiplo de R$ 1.000,00); despesa sem documento cita a
   comprovação (IN SRF 83/2001, arts. 10 e 22). CPF/CNPJ inválido de participante já era erro. 175 testes.
 
+### Relatórios coloridos: reforço (branch `fase-8-relatorio-colorido`)
+- Cor exata em todos os elementos do relatório; dica "Saiu sem cor?" no menu de impressão; versão do site
+  (data do build + commit) no rodapé da página e de todos os relatórios.
+
 ## Em andamento
-- PR da ficha DIRPF e dos novos avisos.
+- PR do reforço de cor dos relatórios.
 
 ## Pendências / dúvidas para a Ananda
 - Cópia do TXT real ainda na biblioteca de arquivos do projeto (aguardando "pode apagar").

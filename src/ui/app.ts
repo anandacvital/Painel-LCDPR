@@ -109,6 +109,7 @@ export function iniciarApp(raiz: HTMLElement): void {
       </div>
       <div id="modulo-painel" class="aba" hidden></div>
     </main>
+    <footer class="rodape-versao">Versão ${__VERSAO__}. Se algo parecer antigo, recarregue a página (Ctrl+Shift+R).</footer>
   `;
 
   const status = raiz.querySelector<HTMLParagraphElement>('#status')!;

@@ -584,3 +584,13 @@ main,
     grid-template-columns: 1fr;
   }
 }
+
+/* Versão do site (data do build + commit): ajuda a saber se o navegador está atualizado. */
+.rodape-versao {
+  max-width: 1200px;
+  margin: var(--esp-4) auto var(--esp-3);
+  padding: 0 var(--esp-3);
+  font-size: 0.8rem;
+  color: var(--gp-texto-suave);
+  text-align: center;
+}

@@ -243,6 +243,7 @@ export function montarPainel(raiz: HTMLElement, analises: readonly ResultadoAnal
             <button type="button" role="menuitem" data-razao="participante"><strong>${TITULO_RAZAO.participante}</strong><small>cada cliente e fornecedor, com % do total</small></button>
             <button type="button" role="menuitem" data-imprimir="dirpf"><strong>Ficha Atividade Rural da DIRPF</strong><small>ano civil ${ano}, um produtor por página, sem filtro</small></button>
             ${filtroAtivo(estado.filtro) ? '<p class="ajuda">Os relatórios saem com o filtro aplicado no Painel (exceto a ficha da DIRPF).</p>' : ''}
+            <p class="ajuda dica-cor">Saiu sem cor? Na janela de impressão, em "Cor" escolha <strong>Colorido</strong> e, em "Mais definições", marque <strong>Gráficos de plano de fundo</strong>.</p>
           </div>
         </details>` : ''}
     </section>
