@@ -9,10 +9,16 @@
  *   (connect-src 'none'). Assim, mesmo que no futuro alguém adicione por engano
  *   um código que tente enviar dados, o próprio navegador bloqueia. É a garantia
  *   técnica de que o TXT do LCDPR nunca sai do computador.
+ * - Google Drive (opcional): se as chaves do Google estiverem configuradas
+ *   (ver src/config/google.ts e docs/google-drive.md), a CSP libera SÓ os
+ *   endereços do Google necessários para escolher e baixar o arquivo.
+ *   Sem as chaves, a CSP fica exatamente como antes (sem conexão nenhuma).
  */
 import { execSync } from 'node:child_process';
-import type { Plugin } from 'vite';
+import { loadEnv, type Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
+import { montarCsp } from './src/config/csp.ts';
+import { lerConfigGoogle } from './src/config/google.ts';
 
 /**
  * Versão do site: data do build + código curto do commit. Aparece no rodapé da
@@ -32,50 +38,44 @@ function versao(): string {
   return `${hoje} · ${commit}`;
 }
 
-const CSP = [
-  "default-src 'self'",
-  "script-src 'self'",
-  "worker-src 'self' blob:",
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "font-src 'self' https://fonts.gstatic.com",
-  "img-src 'self' data: blob:",
-  "connect-src 'none'",
-  "form-action 'none'",
-  "base-uri 'self'",
-  "object-src 'none'",
-].join('; ');
-
 /** Injeta a CSP só no build (o modo de desenvolvimento precisa de conexão local para recarregar a página). */
-function politicaDeSeguranca(): Plugin {
+function politicaDeSeguranca(csp: string): Plugin {
   return {
     name: 'politica-de-seguranca',
     apply: 'build',
     transformIndexHtml(html) {
       return html.replace(
         '<head>',
-        `<head>\n    <meta http-equiv="Content-Security-Policy" content="${CSP}" />`,
+        `<head>\n    <meta http-equiv="Content-Security-Policy" content="${csp}" />`,
       );
     },
   };
 }
 
-export default defineConfig({
-  // Mesmo caminho em todos os modos (dev, preview e produção) para evitar
-  // diferenças entre o que se testa localmente e o que vai para o ar.
-  base: '/Painel-LCDPR/',
-  plugins: [politicaDeSeguranca()],
-  define: {
-    __VERSAO__: JSON.stringify(versao()),
-  },
-  build: {
-    target: 'es2022',
-    sourcemap: true,
-  },
-  worker: {
-    format: 'es',
-  },
-  test: {
-    include: ['tests/**/*.test.ts'],
-    environment: 'node',
-  },
+export default defineConfig(({ mode }) => {
+  // Chaves do Google Drive: vêm das "Variables" do GitHub (deploy) ou do .env.local (computador).
+  const google = lerConfigGoogle({ ...loadEnv(mode, process.cwd(), 'VITE_'), ...process.env });
+  if (google.estado === 'invalido') {
+    throw new Error(`Configuração do Google Drive incompleta ou errada:\n- ${google.problemas.join('\n- ')}\nVeja docs/google-drive.md.`);
+  }
+  return {
+    // Mesmo caminho em todos os modos (dev, preview e produção) para evitar
+    // diferenças entre o que se testa localmente e o que vai para o ar.
+    base: '/Painel-LCDPR/',
+    plugins: [politicaDeSeguranca(montarCsp(google.estado === 'ok'))],
+    define: {
+      __VERSAO__: JSON.stringify(versao()),
+    },
+    build: {
+      target: 'es2022',
+      sourcemap: true,
+    },
+    worker: {
+      format: 'es',
+    },
+    test: {
+      include: ['tests/**/*.test.ts'],
+      environment: 'node',
+    },
+  };
 });

@@ -27,6 +27,8 @@ desenvolvedora): explicar decisões em linguagem simples e comentar o código.
 - Fixtures são **geradas do zero** (nunca anonimizar arquivo real: datas e valores reidentificam).
 - O build de produção injeta CSP com `connect-src 'none'`: o navegador bloqueia
   qualquer envio de dados pela página. Não afrouxar sem aprovação da usuária.
+  Única exceção aprovada (28/11/2026): com as chaves do Google Drive configuradas, a CSP libera SÓ
+  os endereços do Google listados em `src/config/csp.ts`. Sem as chaves, a CSP é a original (teste garante).
 - Conferir o diff antes de cada commit.
 
 ## 4. Arquitetura (decidida pela usuária — não mudar sem consultar)
@@ -50,6 +52,9 @@ desenvolvedora): explicar decisões em linguagem simples e comentar o código.
 | `src/ui/` | `app.ts` (módulos Validador e Painel), `saudeArquivo.ts`, `painel/` (abas do Painel), `graficos/` (ECharts) |
 | `src/report/` | CSV e relatórios para impressão/PDF (`impressao.ts`) |
 | `src/workers/` | Web Worker do parser |
+| `src/config/` | `csp.ts` (política de rede do build) e `google.ts` (chaves opcionais do Google Drive) |
+| `src/drive/` | importar do Google Drive: login, seletor (Picker) e download no navegador |
+| `docs/` | guias para a usuária (`google-drive.md`: passo a passo do Google Cloud) |
 | `src/styles/` | `tokens.css` (paleta e fontes) e `base.css` |
 | `tests/` | testes; `tests/fixtures/` só sintéticos |
 | `scripts/` | utilitários (verificação de sigilo) |
@@ -164,6 +169,16 @@ LCDPR, perguntas 47 e 52; Lei nº 8.023/1990, art. 13). Por isso o critério pad
   valor redondo alto (≥ R$ 10.000,00 e múltiplo de R$ 1.000,00) = info.
 - RIR/2018: só a faixa "arts. 50 a 61" é citada; artigos específicos do RIR não foram conferidos no texto oficial.
 
+## 8.4 Importar do Google Drive (`src/drive/`, `src/config/`, `docs/google-drive.md`)
+- Google Identity Services (token no navegador) + Google Picker, escopo `drive.file` (só os arquivos escolhidos;
+  não exige verificação do app). Download por `www.googleapis.com/drive/v3/files/{id}?alt=media` direto para a
+  memória; o `File` resultante entra no MESMO fluxo do arquivo arrastado. Sem servidor nosso.
+- Chaves (ID do cliente, chave de API restrita ao domínio + Picker API, número do projeto) vêm das Variables do
+  GitHub (`GOOGLE_CLIENT_ID`, `GOOGLE_API_KEY`, `GOOGLE_NUMERO_PROJETO`) no deploy, ou de `.env.local` no dev.
+  Sem chaves: botão escondido e CSP original. Chaves pela metade: o build falha com explicação.
+- Bibliotecas do Google só são carregadas ao passar o mouse/clicar no botão. Token só na memória; revogado em
+  "Apagar dados deste computador". Documentos nativos do Google e não-TXT são recusados antes do download.
+
 ## 9. Decisões registradas
 - 25/11/2026: valores em centavos inteiros; CSP sem conexão de rede no build;
   verificação de sigilo no CI; ECharts adiado para a Fase 3.
@@ -211,3 +226,6 @@ LCDPR, perguntas 47 e 52; Lei nº 8.023/1990, art. 13). Por isso o critério pad
   Correção: gráfico na área de impressão sem animação + `refreshImmediately`, e `imprimir()` espera 2 quadros + 250 ms
   quando há gráficos. Relatório completo: página nova só por produtor, Comparativo e Planejamento; título da aba preso
   ao primeiro bloco (`.rel-inicio-aba`); nomes de mês da tabela mensal viram texto; frases "Clique..." removidas.
+- 28/11/2026: Ananda liberou a importação pelo Google Drive (Picker + OAuth no navegador, escopo drive.file).
+  Ela cria o projeto gratuito no Google Cloud (passo a passo em `docs/google-drive.md`). Risco avisado: o
+  administrador do Workspace pode precisar marcar o app como confiável.
