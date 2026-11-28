@@ -594,3 +594,17 @@ main,
   color: var(--gp-texto-suave);
   text-align: center;
 }
+
+/* Importar do Google Drive (só aparece quando o recurso está configurado). */
+.origem-drive {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--esp-3);
+  margin-top: var(--esp-3);
+  color: var(--gp-texto-suave);
+}
+.origem-drive button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}

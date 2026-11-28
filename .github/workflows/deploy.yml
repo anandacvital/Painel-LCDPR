@@ -29,7 +29,16 @@ jobs:
       - run: npm ci
       - run: npm run sigilo
       - run: npm test
+      # Chaves do Google Drive (opcionais): "Variables" do repositório
+      # (Settings > Secrets and variables > Actions > Variables). Sem elas, o
+      # botão do Drive não aparece e a página continua sem conexão nenhuma.
+      # Não são senhas (o Google as deixa visíveis no site); a proteção é a
+      # restrição ao endereço do painel feita no Google Cloud. Ver docs/google-drive.md.
       - run: npm run build
+        env:
+          VITE_GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
+          VITE_GOOGLE_API_KEY: ${{ vars.GOOGLE_API_KEY }}
+          VITE_GOOGLE_NUMERO_PROJETO: ${{ vars.GOOGLE_NUMERO_PROJETO }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

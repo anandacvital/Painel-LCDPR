@@ -1,6 +1,6 @@
 # PROGRESS.md — andamento do Painel LCDPR
 
-_Última atualização: 26/11/2026 (Fase 2)_
+_Última atualização: 28/11/2026 (importar do Google Drive)_
 
 ## Feito
 ### Fase 0 — Fundação (PR #1, já na `main`)
@@ -138,3 +138,13 @@ _Última atualização: 26/11/2026 (Fase 2)_
 - Área e produção (R$/ha, R$/saca): virão do sistema Vértice no futuro.
 - Cadastrar a tabela progressiva de cada novo ano em `TABELAS_ANUAIS` (`domain/irpf.ts`).
 - Tributação mínima de altas rendas (Lei 15.270/2025) não é calculada: só alertada.
+
+### Importar do Google Drive (branch `fase-12-google-drive`)
+- Botão "Importar do Google Drive" ao lado da área de arrastar, só quando as chaves do Google estão configuradas.
+- Login do Google no navegador (escopo `drive.file`), seletor de arquivos do Google (TXT, todos os arquivos e
+  Drives compartilhados, vários de uma vez) e download direto para o navegador; mesmo fluxo de análise.
+- CSP: sem chaves, idêntica à anterior; com chaves, libera só endereços do Google (`src/config/csp.ts`).
+- Passo a passo para criar o projeto no Google Cloud e guardar as chaves no GitHub: `docs/google-drive.md`.
+- Pendente com Ananda: criar o projeto no Google Cloud, cadastrar as 3 Variables e testar com um TXT real
+  (o fluxo com o Google de verdade não pôde ser testado aqui, sem as chaves).
+- 188 testes.

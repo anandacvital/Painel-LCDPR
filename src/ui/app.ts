@@ -6,6 +6,8 @@
  * 2. cada arquivo vai para o Worker, que devolve a análise;
  * 3. a análise entra na lista de arquivos;
  * 4. se "Manter neste computador" estiver ligado, a análise é salva no IndexedDB.
+ * Opcional: o botão "Importar do Google Drive" (só aparece se as chaves do Google
+ * estiverem configuradas) baixa o TXT do Drive para o navegador e segue o mesmo fluxo.
  *
  * Dois módulos, escolhidos no cabeçalho, usam os mesmos arquivos:
  * - VALIDADOR (antes de transmitir): saúde do arquivo, erros e onde corrigir;
@@ -14,6 +16,8 @@
 import { formatarCpfCnpj } from '../domain/documentos';
 import type { ResultadoAnalise, Semaforo } from '../parser/modelo';
 import { analisarArquivo } from '../workers/cliente';
+import { lerConfigGoogle } from '../config/google';
+import { desconectarGoogle, importarDoDrive, prepararGoogle } from '../drive/googleDrive';
 import {
   apagarTudo,
   carregarAnalises,
@@ -27,7 +31,7 @@ import {
   salvarCenarios,
 } from './armazenamento';
 import { esc, numeroBR } from './html';
-import { iconeArquivo, iconeBroto, iconeCadeado, iconeFechar, iconeLixeira } from './icones';
+import { iconeArquivo, iconeBroto, iconeCadeado, iconeDrive, iconeFechar, iconeLixeira } from './icones';
 import { montarSaudeArquivo } from './saudeArquivo';
 import { imprimirValidador } from '../report/impressao';
 import { montarPainel, novoEstadoPainel, type EstadoPainel } from './painel/modulo';
@@ -47,6 +51,14 @@ interface Estado {
   modulo: Modulo;
   painel: EstadoPainel;
 }
+
+/** Chaves do Google lidas no build (null = recurso desligado; o build já barrou configuração errada). */
+const configGoogle = lerConfigGoogle({
+  VITE_GOOGLE_CLIENT_ID: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+  VITE_GOOGLE_API_KEY: import.meta.env.VITE_GOOGLE_API_KEY,
+  VITE_GOOGLE_NUMERO_PROJETO: import.meta.env.VITE_GOOGLE_NUMERO_PROJETO,
+});
+const google = configGoogle.estado === 'ok' ? configGoogle.config : null;
 
 /** Chave do arquivo: produtor + ano. Reenviar o mesmo produtor/ano substitui a análise anterior. */
 function chaveDe(r: ResultadoAnalise): string {
@@ -101,6 +113,14 @@ export function iniciarApp(raiz: HTMLElement): void {
           <p>ou clique para escolher no computador</p>
           <input id="entrada-arquivo" type="file" accept=".txt,text/plain" multiple hidden />
         </label>
+        ${
+          google
+            ? `<div class="origem-drive">
+                 <span>ou</span>
+                 <button type="button" class="botao-sec" id="importar-drive">${iconeDrive}Importar do Google Drive</button>
+               </div>`
+            : ''
+        }
         <p id="status" class="status" role="status" aria-live="polite"></p>
       </section>
       <div id="modulo-validador">
@@ -182,12 +202,13 @@ export function iniciarApp(raiz: HTMLElement): void {
   });
 
   // ---- Arquivos ------------------------------------------------------------------
-  const processar = async (arquivos: FileList | null): Promise<void> => {
-    if (!arquivos || arquivos.length === 0) return;
+  const processar = async (lista: FileList | readonly File[] | null, origem = ''): Promise<string[]> => {
+    if (!lista || lista.length === 0) return [];
+    const arquivos = Array.from(lista);
     const falhas: string[] = [];
     const substituidos: string[] = [];
     let i = 0;
-    for (const arq of Array.from(arquivos)) {
+    for (const arq of arquivos) {
       i++;
       status.textContent = `Analisando ${arq.name} (${i} de ${arquivos.length})...`;
       try {
@@ -204,12 +225,39 @@ export function iniciarApp(raiz: HTMLElement): void {
       }
     }
     const avisos = [
-      falhas.length ? `Não foi possível ler: ${falhas.join('; ')}.` : `${arquivos.length} arquivo(s) analisado(s).`,
+      falhas.length ? `Não foi possível ler: ${falhas.join('; ')}.` : `${arquivos.length} arquivo(s) analisado(s)${origem}.`,
       ...substituidos.map((t) => `${t}.`),
     ];
     status.textContent = avisos.join(' ');
     entrada.value = '';
+    return avisos;
   };
+
+  // ---- Google Drive (só quando configurado: ver docs/google-drive.md) ----------------
+  const botaoDrive = raiz.querySelector<HTMLButtonElement>('#importar-drive');
+  if (google && botaoDrive) {
+    // Carrega as bibliotecas do Google ao passar o mouse/teclado no botão, para a
+    // janela de login abrir na hora do clique (senão o navegador pode bloqueá-la).
+    const aquecer = (): void => void prepararGoogle().catch(() => undefined);
+    botaoDrive.addEventListener('pointerenter', aquecer, { once: true });
+    botaoDrive.addEventListener('focus', aquecer, { once: true });
+    botaoDrive.addEventListener('click', async () => {
+      botaoDrive.disabled = true;
+      try {
+        const { arquivos, falhas } = await importarDoDrive(google, (t) => (status.textContent = t));
+        if (!arquivos.length && !falhas.length) {
+          status.textContent = 'Nenhum arquivo escolhido no Google Drive.';
+          return;
+        }
+        const avisos = await processar(arquivos, ' do Google Drive');
+        if (falhas.length) status.textContent = [`Não foi possível baixar: ${falhas.join('; ')}.`, ...avisos].join(' ');
+      } catch (e) {
+        status.textContent = `Google Drive: ${e instanceof Error ? e.message : String(e)}.`;
+      } finally {
+        botaoDrive.disabled = false;
+      }
+    });
+  }
 
   entrada.addEventListener('change', () => void processar(entrada.files));
   area.addEventListener('dragover', (e) => {
@@ -256,6 +304,7 @@ export function iniciarApp(raiz: HTMLElement): void {
 
   raiz.querySelector<HTMLButtonElement>('#apagar-tudo')!.addEventListener('click', async () => {
     await apagarTudo();
+    if (google) desconectarGoogle();
     estado.analises.clear();
     estado.painel.plano.cenarios = [];
     estado.painel.ajustes = {};
