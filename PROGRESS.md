@@ -112,8 +112,12 @@ _Última atualização: 26/11/2026 (Fase 2)_
 - Cor exata em todos os elementos do relatório; dica "Saiu sem cor?" no menu de impressão; versão do site
   (data do build + commit) no rodapé da página e de todos os relatórios.
 
+### Tooltips em reais pt-BR (branch `fase-9-tooltips-ptbr`)
+- Corrigido: gráficos com tooltip próprio (Comparativo, Imóveis, Receitas & Despesas, Gestão) mostravam centavos
+  no padrão americano. Agora todos usam "R$ 1.234,56". 178 testes.
+
 ## Em andamento
-- PR do reforço de cor dos relatórios.
+- PR dos tooltips em pt-BR.
 
 ## Pendências / dúvidas para a Ananda
 - Cópia do TXT real ainda na biblioteca de arquivos do projeto (aguardando "pode apagar").

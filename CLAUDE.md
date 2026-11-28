@@ -199,3 +199,6 @@ LCDPR, perguntas 47 e 52; Lei nº 8.023/1990, art. 13). Por isso o critério pad
   preto e branco ou PDF de exemplo antigo. Reforço: `print-color-adjust: exact` em todos os elementos do relatório,
   dica de impressão no menu e VERSÃO do site (data do build + commit, `__VERSAO__` em vite.config.ts) no rodapé
   da página e dos relatórios.
+- 28/11/2026: tooltip do Comparativo mostrava centavos no padrão americano ("1,407,944,656"): o `tooltip` próprio
+  do gráfico substituía o comum e perdia o formatador. `opcoesFinais` (ui/graficos/echarts.ts) agora MESCLA
+  tooltip, legend e textStyle com a base; todo gráfico (tela e relatórios) passa por ela.
