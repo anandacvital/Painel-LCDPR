@@ -1,6 +1,6 @@
 # PROGRESS.md — andamento do Painel LCDPR
 
-_Última atualização: 26/11/2026 (Fase 2)_
+_Última atualização: 28/11/2026 (Fase 12 — revisão geral)_
 
 ## Feito
 ### Fase 0 — Fundação (PR #1, já na `main`)
@@ -126,10 +126,27 @@ _Última atualização: 26/11/2026 (Fase 2)_
 - Menos páginas em branco: as abas de um produtor seguem em sequência; título nunca sozinho no pé da página;
   mês da tabela mensal volta a aparecer. 180 testes.
 
+### Revisão geral e correções (branch `fase-12-revisao-bugs`)
+- Teste automático no navegador: todas as abas x ano civil, safra e período livre x produtores x critérios de
+  consolidação x todos os relatórios (sem nenhum erro de tela); 327 tooltips conferidos (todos em R$ pt-BR).
+- Corrigido: PDF do Relatório completo com gráficos invadindo o cartão vizinho (tabela mensal larga fazia o Chrome
+  reduzir a página); KPI de IRPF passando da margem no relatório executivo.
+- Corrigido: alerta "receita perto do limite do LCDPR" somava todos os produtores (a obrigação é por CPF).
+- Corrigido: prejuízo encadeado ignorava a opção pelos 20% informada no 0010 dos anos anteriores.
+- Corrigido: empate entre real e 20% mostrava texto errado; com prejuízo acumulado o real é o indicado.
+- Corrigido: título de sazonalidade dizia "3 meses" quando a receita entrou em 1 ou 2 meses.
+- Corrigido: produtor em prévia + outro completo no mesmo ano cortava os meses (gráfico não batia com o total).
+- Corrigido: filtro de mês ficava preso ao mudar o período livre; mensagem de arquivos lidos/falhos e aviso de
+  arquivo que não é LCDPR.
+- Validador: novas regras (linhas em branco no fim, hierarquia 0045, situação especial, versão do leiaute,
+  20% com prejuízo, condomínio acima de 100%, CNPJ alfanumérico). 197 testes.
+
 ## Em andamento
-- PR dos ajustes do relatório completo.
+- PR da revisão geral (fase 12).
 
 ## Pendências / dúvidas para a Ananda
+- CNPJ alfanumérico: confirmar se o PVA/leiaute vigente do LCDPR já aceita (o painel só alerta).
+- DT_SIT_ESP no espólio: o painel trata como alerta; conferir no Manual se é obrigatório.
 - Cópia do TXT real ainda na biblioteca de arquivos do projeto (aguardando "pode apagar").
 - Lei nº 9.250/1995, art. 18: texto não conferido (fonte indisponível).
 

@@ -24,8 +24,11 @@ describe('títulos-conclusão', () => {
     expect(tituloFluxoCaixa(meses)).toContain('negativo, com o pior ponto em janeiro');
   });
 
-  it('sazonalidade', () => {
-    expect(tituloSazonalidade(meses)).toMatch(/^100% da receita do ano entrou em 3 meses: março, maio/);
+  it('sazonalidade: conta só os meses que tiveram receita', () => {
+    // A receita deste exemplo entrou só em março e maio: antes o título dizia "3 meses".
+    expect(tituloSazonalidade(meses)).toBe('100% da receita do ano entrou em 2 meses: março e maio');
+    const umMes = meses.map((m) => (m.mes === '2025-03' ? m : { ...m, receitas: 0 }));
+    expect(tituloSazonalidade(umMes)).toBe('Toda a receita do ano entrou em março');
   });
 
   it('destaques executivos com variação', () => {

@@ -211,3 +211,13 @@ LCDPR, perguntas 47 e 52; Lei nº 8.023/1990, art. 13). Por isso o critério pad
   Correção: gráfico na área de impressão sem animação + `refreshImmediately`, e `imprimir()` espera 2 quadros + 250 ms
   quando há gráficos. Relatório completo: página nova só por produtor, Comparativo e Planejamento; título da aba preso
   ao primeiro bloco (`.rel-inicio-aba`); nomes de mês da tabela mensal viram texto; frases "Clique..." removidas.
+- 28/11/2026: revisão geral (fase 12). Regras novas no Validador (todas ALERTA, salvo indicado): linhas em branco depois
+  do 9999 (não contam no QTD_LIN); 0045 fora da hierarquia (logo abaixo do seu 0040); DT_SIT_ESP obrigatória com
+  situação especial (erro para falecimento e saída do País; alerta no espólio) e vazia sem ela; COD_VER ≠ "0013";
+  FORMA_APUR 2 com resultado ≤ 0 (art. 5º só vale para resultado positivo); condomínio com produtor + condôminos > 100%;
+  CNPJ ALFANUMÉRICO (IN RFB 2.229/2024) com DV válido = alerta e o lançamento segue nos cálculos (leiaute 1.3 diz "N":
+  conferir se o PVA aceita). Prejuízo encadeado: ano anterior com FORMA_APUR 2 e lucro ZERA o saldo (art. 16, par. único).
+  Empate de imposto com prejuízo acumulado = vence o resultado real. Alerta de obrigatoriedade do LCDPR é POR CPF (antes
+  somava os produtores). Ano com um produtor em prévia e outro completo: a visão não é prévia (aviso por produtor).
+  Impressão: nada pode passar dos 182 mm úteis do A4 (senão o Chrome reduz a página e os gráficos invadem o vizinho);
+  no relatório completo `.duas-colunas` vira uma coluna e os 5 KPIs usam `minmax(0, 1fr)`.

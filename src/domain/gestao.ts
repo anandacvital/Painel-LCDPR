@@ -192,6 +192,8 @@ export interface EntradaAlertas {
   /** Ano civil (para obrigatoriedade e planejamento); null em safra ou período livre. */
   anoCivil: { ano: number; previaAteMes: number | null } | null;
   formatarDoc: (id: string) => string;
+  /** Nome do produtor pelo CPF (alertas por produtor, como a obrigatoriedade do LCDPR). */
+  nomeProdutor?: (cpf: string) => string;
 }
 
 const ORDEM_NIVEL: Record<NivelAlerta, number> = { risco: 0, atencao: 1, oportunidade: 2, info: 3 };
@@ -295,15 +297,24 @@ export function gerarAlertas(e: EntradaAlertas): Alerta[] {
 
   // 7. Ano civil: obrigatoriedade do LCDPR e janela de planejamento.
   if (e.anoCivil) {
-    const receita = e.totais.receitas;
+    // A obrigatoriedade é de CADA produtor (CPF), nunca da soma consolidada.
     const meses = e.anoCivil.previaAteMes ?? 12;
-    const projetada = Math.round((receita / meses) * 12);
-    if (projetada >= LIMITE_OBRIGATORIEDADE_LCDPR * 0.8 && receita < LIMITE_OBRIGATORIEDADE_LCDPR) {
+    const porCpf = new Map<string, Centavos>();
+    for (const l of e.lancamentos) porCpf.set(l.cpf, (porCpf.get(l.cpf) ?? 0) + valorReceita(l));
+    const candidatos = [...porCpf.entries()]
+      .map(([cpf, receita]) => ({ cpf, receita, projetada: Math.round((receita / meses) * 12) }))
+      .filter((x) => x.projetada >= LIMITE_OBRIGATORIEDADE_LCDPR * 0.8)
+      .sort((x, y) => y.projetada - x.projetada);
+    const maior = candidatos[0];
+    if (maior) {
+      const quem = porCpf.size > 1 ? `${e.nomeProdutor?.(maior.cpf) ?? e.formatarDoc(maior.cpf)}: receita` : 'Receita';
+      const acima = maior.receita > LIMITE_OBRIGATORIEDADE_LCDPR;
+      const valor = e.anoCivil.previaAteMes && !acima ? maior.projetada : maior.receita;
       a.push({
         id: 'obrigatoriedade',
         nivel: 'atencao',
-        titulo: 'Receita perto do limite que obriga o LCDPR',
-        texto: `Receita ${e.anoCivil.previaAteMes ? 'projetada para o ano' : 'do ano'}: ${formatarReais(e.anoCivil.previaAteMes ? projetada : receita)}. Acima de R$ 4.800.000,00 o LCDPR é obrigatório (IN SRF nº 83/2001, art. 23-A).`,
+        titulo: acima ? 'Receita acima do limite: o LCDPR é obrigatório' : 'Receita perto do limite que obriga o LCDPR',
+        texto: `${quem} ${e.anoCivil.previaAteMes && !acima ? 'projetada para o ano' : 'do ano'} de ${formatarReais(valor)}. Acima de R$ 4.800.000,00 de receita bruta no ano o LCDPR é obrigatório para o produtor, no prazo da declaração do IRPF (IN SRF nº 83/2001, art. 23-A).${candidatos.length > 1 ? ` Outros ${candidatos.length - 1} produtor(es) também estão perto ou acima do limite.` : ''}`,
         acao: { tipo: 'aba', rotulo: 'Ver no Planejamento IRPF', aba: 'planejamento' },
       });
     }

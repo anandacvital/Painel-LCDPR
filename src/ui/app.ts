@@ -186,12 +186,15 @@ export function iniciarApp(raiz: HTMLElement): void {
     if (!arquivos || arquivos.length === 0) return;
     const falhas: string[] = [];
     const substituidos: string[] = [];
+    const naoLcdpr: string[] = [];
     let i = 0;
     for (const arq of Array.from(arquivos)) {
       i++;
       status.textContent = `Analisando ${arq.name} (${i} de ${arquivos.length})...`;
       try {
         const r = await analisarArquivo(arq);
+        // Sem 0000 e sem lançamentos: provavelmente outro arquivo (extrato, SPED, planilha).
+        if (!r.arquivo.abertura && r.arquivo.lancamentos.length === 0) naoLcdpr.push(arq.name);
         const chave = chaveDe(r);
         const anterior = estado.analises.get(chave);
         if (anterior) substituidos.push(`${arq.name} substituiu ${anterior.arquivo.nomeArquivo} (mesmo produtor e ano-base)`);
@@ -203,8 +206,11 @@ export function iniciarApp(raiz: HTMLElement): void {
         falhas.push(`${arq.name}: ${e instanceof Error ? e.message : String(e)}`);
       }
     }
+    const lidos = arquivos.length - falhas.length;
     const avisos = [
-      falhas.length ? `Não foi possível ler: ${falhas.join('; ')}.` : `${arquivos.length} arquivo(s) analisado(s).`,
+      ...(lidos > 0 ? [`${lidos} arquivo(s) analisado(s).`] : []),
+      ...(falhas.length ? [`Não foi possível ler: ${falhas.join('; ')}.`] : []),
+      ...(naoLcdpr.length ? [`${naoLcdpr.join(', ')} não ${naoLcdpr.length === 1 ? 'parece' : 'parecem'} ser LCDPR (sem o registro 0000): confira se é o arquivo certo.`] : []),
       ...substituidos.map((t) => `${t}.`),
     ];
     status.textContent = avisos.join(' ');
