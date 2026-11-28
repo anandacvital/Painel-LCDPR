@@ -270,9 +270,16 @@
     position: static;
     width: auto;
   }
-  .relatorio {
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+  /* Cor exata em TODOS os elementos (não só herdada): alguns navegadores só
+     respeitam a regra no próprio elemento que tem o fundo colorido. */
+  html,
+  body,
+  #area-impressao,
+  .relatorio,
+  .relatorio * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
   }
   .rel-tabela thead {
     display: table-header-group; /* repete o cabeçalho da tabela em cada página */
@@ -323,7 +330,8 @@
  * Continuam legíveis em preto e branco: entradas e saídas ficam em colunas
  * separadas, negativos têm sinal "-", e os fundos são claros (viram cinza claro).
  * =================================================================== */
-.relatorio {
+.relatorio,
+.relatorio * {
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
 }
@@ -398,4 +406,9 @@
 /* Relatório "separado": cada produtor começa em página nova. */
 .rel-nova-pagina {
   break-before: page;
+}
+
+.rel-versao {
+  display: block;
+  margin-top: 2pt;
 }

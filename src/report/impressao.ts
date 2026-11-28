@@ -62,6 +62,7 @@ export const RODAPE = `
   <footer class="rel-rodape">
     Documento gerado no navegador a partir do arquivo LCDPR; nenhum dado foi enviado pela internet.
     Contém informações fiscais sigilosas: guarde e compartilhe com cuidado.
+    <span class="rel-versao">Painel LCDPR, versão ${__VERSAO__}.</span>
   </footer>`;
 
 // ===========================================================================

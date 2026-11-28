@@ -10,8 +10,27 @@
  *   um código que tente enviar dados, o próprio navegador bloqueia. É a garantia
  *   técnica de que o TXT do LCDPR nunca sai do computador.
  */
+import { execSync } from 'node:child_process';
 import type { Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
+
+/**
+ * Versão do site: data do build + código curto do commit. Aparece no rodapé da
+ * página e dos relatórios, para saber se o navegador está com a versão mais nova
+ * (uma aba aberta há dias continua com a versão antiga até recarregar).
+ */
+function versao(): string {
+  let commit = (process.env.GITHUB_SHA ?? '').slice(0, 7);
+  if (!commit) {
+    try {
+      commit = execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
+    } catch {
+      commit = 'local';
+    }
+  }
+  const hoje = new Date().toISOString().slice(0, 10).split('-').reverse().join('/');
+  return `${hoje} · ${commit}`;
+}
 
 const CSP = [
   "default-src 'self'",
@@ -45,6 +64,9 @@ export default defineConfig({
   // diferenças entre o que se testa localmente e o que vai para o ar.
   base: '/Painel-LCDPR/',
   plugins: [politicaDeSeguranca()],
+  define: {
+    __VERSAO__: JSON.stringify(versao()),
+  },
   build: {
     target: 'es2022',
     sourcemap: true,

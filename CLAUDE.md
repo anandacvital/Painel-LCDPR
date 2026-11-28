@@ -194,3 +194,8 @@ LCDPR, perguntas 47 e 52; Lei nº 8.023/1990, art. 13). Por isso o critério pad
   indicadores de gestão, alertas no topo, relatórios coloridos, Livro Caixa de um mês e unificado/separado.
 - 26/11/2026: Ananda aprovou a ficha Atividade Rural da DIRPF e os avisos de receita não rural e de lançamentos
   fora do padrão (Fase 7). A ficha fica na aba Planejamento e no menu de impressão, sem aba nova.
+- 28/11/2026: Ananda relatou relatório executivo sem cor. No navegador de teste (Chromium) ele sai colorido mesmo
+  sem "Gráficos de plano de fundo"; causa provável: aba aberta com versão anterior ao PR #12, impressora/diálogo em
+  preto e branco ou PDF de exemplo antigo. Reforço: `print-color-adjust: exact` em todos os elementos do relatório,
+  dica de impressão no menu e VERSÃO do site (data do build + commit, `__VERSAO__` em vite.config.ts) no rodapé
+  da página e dos relatórios.
