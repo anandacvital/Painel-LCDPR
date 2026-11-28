@@ -82,11 +82,30 @@ export const eixoMeses = (rotulos: readonly string[] = MESES_CURTOS) => ({
 
 const ativos = new Set<echarts.ECharts>();
 
+type Objeto = Record<string, unknown>;
+const ehObjeto = (x: unknown): x is Objeto => typeof x === 'object' && x !== null && !Array.isArray(x);
+
+/**
+ * Junta as opções do gráfico com as comuns (base). tooltip, legend e textStyle são
+ * MESCLADOS, não substituídos: antes, um gráfico que trazia o próprio `tooltip`
+ * (ex.: { trigger: 'axis', axisPointer }) perdia o formatador em reais e o ECharts
+ * mostrava centavos no padrão americano ("1,407,944,656" em vez de "R$ 14.079.446,56").
+ */
+export function opcoesFinais(opcao: echarts.EChartsCoreOption): echarts.EChartsCoreOption {
+  const b = base() as Objeto;
+  const o = opcao as Objeto;
+  const final: Objeto = { ...b, ...o };
+  for (const chave of ['tooltip', 'legend', 'textStyle']) {
+    if (ehObjeto(b[chave]) && ehObjeto(o[chave])) final[chave] = { ...b[chave], ...o[chave] };
+  }
+  return final;
+}
+
 /** Cria (ou recria) um gráfico no elemento, ajustando o tamanho quando a janela muda. */
 export function desenharGrafico(el: HTMLElement, opcao: echarts.EChartsCoreOption): echarts.ECharts {
   echarts.getInstanceByDom(el)?.dispose();
   const g = echarts.init(el, undefined, { renderer: 'svg' });
-  g.setOption({ ...base(), ...opcao });
+  g.setOption(opcoesFinais(opcao));
   ativos.add(g);
   return g;
 }
