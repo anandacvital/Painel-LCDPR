@@ -202,3 +202,7 @@ LCDPR, perguntas 47 e 52; Lei nº 8.023/1990, art. 13). Por isso o critério pad
 - 28/11/2026: tooltip do Comparativo mostrava centavos no padrão americano ("1,407,944,656"): o `tooltip` próprio
   do gráfico substituía o comum e perdia o formatador. `opcoesFinais` (ui/graficos/echarts.ts) agora MESCLA
   tooltip, legend e textStyle com a base; todo gráfico (tela e relatórios) passa por ela.
+- 28/11/2026: Ananda pediu um relatório com todas as abas menos o Detalhamento: "Relatório completo" no menu de
+  impressão (`report/completo.ts`). As abas são desenhadas pelas MESMAS funções da tela dentro da área de impressão
+  (botões/campos escondidos por `.painel-impresso`; blocos recolhidos saem abertos); Planejamento usa
+  `corpoPlanejamento`. Período e filtro valem como na tela; Comparativo e Planejamento sempre ano civil sem filtro.

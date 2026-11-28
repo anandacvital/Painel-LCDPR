@@ -412,3 +412,51 @@
   display: block;
   margin-top: 2pt;
 }
+
+/* ===================================================================
+ * RELATÓRIO COMPLETO: abas do Painel desenhadas pelas funções da tela.
+ * No papel não há cliques: esconde botões, campos e a tabela de ajuste.
+ * =================================================================== */
+.rel-titulo-aba {
+  margin: 0 0 8pt;
+  padding: 6pt 10pt;
+  border-left: 4pt solid var(--gp-azul-1);
+  background: var(--gp-fundo);
+  font-size: 13pt;
+  color: var(--gp-navy);
+}
+.rel-titulo-aba small {
+  font-size: 8.5pt;
+  font-weight: 400;
+  color: var(--gp-texto-suave);
+}
+.painel-impresso {
+  font-size: 9pt;
+}
+.painel-impresso button,
+.painel-impresso input,
+.painel-impresso select,
+.painel-impresso .ajuste-naturezas,
+.painel-impresso .nota-ano-civil {
+  display: none !important;
+}
+.painel-impresso .card {
+  box-shadow: none;
+  border: 0.5pt solid var(--gp-borda);
+  margin-bottom: 8pt;
+  break-inside: avoid;
+}
+.painel-impresso .tabela-rolagem {
+  overflow: visible;
+}
+.relatorio-planejamento .rel-bloco h2 {
+  font-size: 11pt;
+}
+.painel-impresso h2,
+.painel-impresso h3 {
+  break-after: avoid;
+}
+.painel-impresso details > summary {
+  list-style: none;
+  font-weight: 600;
+}

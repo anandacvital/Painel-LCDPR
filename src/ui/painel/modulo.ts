@@ -32,8 +32,9 @@ import { abaComparativo, abaFluxoCaixa, abaImoveis, abaReceitasDespesas, abaVisa
 import { detectarPrevia, montarVisao, rotuloFiltro, textoComparacao, TODOS, type Visao } from './contexto';
 import { dadosAlertas, type AcoesPainel } from './gestao';
 import { abaDetalhamento } from './detalhamento';
-import { abaPlanejamento, montarFichas, novoEstadoPlano, type EstadoPlano } from './planejamento';
+import { abaPlanejamento, montarFichas, montarPlanos, novoEstadoPlano, type EstadoPlano } from './planejamento';
 import { imprimirDirpf } from '../../report/dirpf';
+import { imprimirCompleto } from '../../report/completo';
 
 export type AbaPainel = 'executiva' | 'fluxo' | 'receitas' | 'imoveis' | 'comparativo' | 'planejamento' | 'detalhamento';
 
@@ -228,6 +229,7 @@ export function montarPainel(raiz: HTMLElement, analises: readonly ResultadoAnal
                 <label><input type="radio" name="modo-relatorio" value="unificado" ${estado.modoRelatorio === 'unificado' ? 'checked' : ''} data-modo-relatorio> Unificado <small>um relatório, com o produtor em cada lançamento</small></label>
                 <label><input type="radio" name="modo-relatorio" value="separado" ${estado.modoRelatorio === 'separado' ? 'checked' : ''} data-modo-relatorio> Separado <small>um relatório por produtor, cada um em nova página</small></label>
               </fieldset>` : ''}
+            <button type="button" role="menuitem" data-imprimir="completo"><strong>Relatório completo</strong><small>todas as abas, menos o Detalhamento</small></button>
             <button type="button" role="menuitem" data-imprimir="executivo"><strong>Relatório executivo</strong><small>indicadores, gráficos e destaques</small></button>
             <div class="item-livro">
               <button type="button" role="menuitem" data-razao="livro"><strong>${TITULO_RAZAO.livro}</strong><small>lançamentos, saldo e totais por mês</small></button>
@@ -377,6 +379,18 @@ export function montarPainel(raiz: HTMLElement, analises: readonly ResultadoAnal
     raiz.querySelector<HTMLButtonElement>('[data-imprimir="executivo"]')?.addEventListener('click', () => {
       if (menu) menu.open = false;
       imprimirExecutivo(visoesParaImprimir());
+    });
+    // Completo: as abas do Painel (menos Detalhamento) num só PDF.
+    raiz.querySelector<HTMLButtonElement>('[data-imprimir="completo"]')?.addEventListener('click', () => {
+      if (menu) menu.open = false;
+      if (!visaoAno) return;
+      imprimirCompleto({
+        visoes: visoesParaImprimir(),
+        visaoAno,
+        analises,
+        planos: montarPlanos(analises, visaoAno, estado.plano),
+        simulacao: estado.plano,
+      });
     });
     // DIRPF: sempre o ano civil inteiro, por CPF (o IRPF é anual e de cada pessoa).
     raiz.querySelector<HTMLButtonElement>('[data-imprimir="dirpf"]')?.addEventListener('click', () => {

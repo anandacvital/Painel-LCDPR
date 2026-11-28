@@ -104,6 +104,13 @@ export function htmlPlanejamento(v: Visao, planos: readonly PlanoProdutor[], sim
       ['Ano-calendário', previa ? `${v.ano} (prévia até ${dataBR(previa.fim)})` : String(v.ano)],
       ['Base do cálculo', previa ? (sim.usarProjecao ? 'projeção até dezembro' : 'realizado até a prévia') : 'ano realizado'],
     ])}
+    ${corpoPlanejamento(planos, sim)}
+    ${RODAPE}`;
+}
+
+/** Conteúdo do planejamento sem cabeçalho e rodapé (também usado no Relatório Completo). */
+export function corpoPlanejamento(planos: readonly PlanoProdutor[], sim: DadosSimulacao): string {
+  return `
     <div class="rel-avisos"><strong>Estimativa.</strong> ${esc(AVISO_ESTIMATIVA)}</div>
     ${planos.map((p) => secaoProdutor(p, sim)).join('')}
     <section class="rel-bloco">
@@ -112,8 +119,7 @@ export function htmlPlanejamento(v: Visao, planos: readonly PlanoProdutor[], sim
         <thead><tr><th>Cuidado</th><th>Base legal</th></tr></thead>
         <tbody>${CUIDADOS.map((c) => `<tr><td><strong>${esc(c.titulo)}.</strong> ${esc(c.texto)}</td><td>${esc(c.base)}</td></tr>`).join('')}</tbody>
       </table>
-    </section>
-    ${RODAPE}`;
+    </section>`;
 }
 
 export function imprimirPlanejamento(v: Visao, planos: readonly PlanoProdutor[], sim: DadosSimulacao): void {
